@@ -19,6 +19,7 @@
 
 
 #include <MediaFile.h>
+#include <OS.h>
 #include <SoundPlayer.h>
 
 #include <MediaIO.h>
@@ -47,6 +48,7 @@ public:
 	status_t Stop();
 	float Volume();
 	void SetVolume(float volume);
+	void DisableNotifications() { atomic_set(&fNotificationsEnabled, 0); }
 
 	enum PlayState {
 		InActive = -1,
@@ -54,31 +56,38 @@ public:
 		Playing,
 		Buffering
 	};
-	inline PlayState State() { return fState; }
+	inline PlayState State() { return (PlayState)atomic_get(&fState); }
 
 private:
 	void _SetState(PlayState state);
 
 	static status_t _StartPlayThreadFunc(StreamPlayer* _this);
+	static status_t _ReconnectThreadFunc(StreamPlayer* _this);
 	static void _GetDecodedChunk(
 		void* cookie, void* buffer, size_t size, const media_raw_audio_format& format);
+	void _ScheduleReconnect(status_t error);
 
 private:
 	Station* fStation;
 	BLooper* fNotify;
+	int32 fNotificationsEnabled;
 	BMediaFile* fMediaFile;
 	StreamIO* fStream;
 	BSoundPlayer* fPlayer;
-	PlayState fState;
+	int32 fState;
 
 	status_t fInitStatus;
-	bool fStopRequested;
+	int32 fStopRequested;
+	int32 fReconnectRequested;
+	int32 fReconnectAttempts;
+	int32 fDecodeFailures;
 
 	media_codec_info fCodecInfo;
 	media_format fDecodedFormat;
 	media_header fHeader;
 	media_decode_info fInfo;
 	int32 fFlushCount;
+	thread_id fPlayThread;
 };
 
 

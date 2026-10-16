@@ -8,12 +8,14 @@
 
 #include <MediaIO.h>
 
+#include <new>
 #include <string.h>
 
 #include "MediaDebug.h"
 
 
 #define TIMEOUT_QUANTA 100000
+#define STREAM_HISTORY_SIZE (512 * 1024)
 
 
 class RelativePositionIO : public BPositionIO {
@@ -23,6 +25,7 @@ public:
 		  fOwner(owner),
 		  fBackPosition(0),
 		  fStartOffset(0),
+		  fReadPosition(0),
 		  fBuffer(buffer),
 		  fTimeout(timeout)
 	{
@@ -32,29 +35,63 @@ public:
 
 	status_t ResetStartOffset(off_t offset)
 	{
+		AutoWriteLocker _(fLock);
+
 		status_t ret = fBuffer->SetSize(0);
 		if (ret != B_OK)
 			return ret;
 
 		fBackPosition = 0;
 		fStartOffset = offset;
+		fReadPosition = offset;
 		return B_OK;
 	}
 
-	status_t FlushRead(BPositionIO* buffer, const void* oldBuffer, size_t oldLength)
+	status_t FlushRead(BPositionIO* buffer)
 	{
 		AutoWriteLocker _(fLock);
-		off_t position = fBuffer->Position();
-		buffer->WriteAt(0, (void*)((addr_t)oldBuffer + position), oldLength - position);
-		buffer->Seek(fBuffer->Position() - position, SEEK_SET);
-		fBackPosition -= position;
-		fStartOffset += position;
+
+		BMallocIO* oldBuffer = dynamic_cast<BMallocIO*>(fBuffer);
+		if (oldBuffer == NULL) {
+			delete buffer;
+			return B_NOT_SUPPORTED;
+		}
+
+		// ReadAt() does not move BPositionIO's cursor. Track the decoder's
+		// furthest absolute read position and retain a history window for codecs
+		// which need to inspect earlier frames.
+		off_t discardLength = fReadPosition - fStartOffset - STREAM_HISTORY_SIZE;
+		if (discardLength <= 0) {
+			delete buffer;
+			return B_OK;
+		}
+
+		size_t oldLength = oldBuffer->BufferLength();
+		if ((size_t)discardLength > oldLength) {
+			delete buffer;
+			return B_BAD_VALUE;
+		}
+
+		size_t remaining = oldLength - (size_t)discardLength;
+		ssize_t written
+			= buffer->WriteAt(0, (const uint8*)oldBuffer->Buffer() + discardLength, remaining);
+		if (written < 0 || (size_t)written != remaining) {
+			delete buffer;
+			return written < 0 ? written : B_IO_ERROR;
+		}
+
+		off_t oldPosition = fBuffer->Position();
+		buffer->Seek(oldPosition > discardLength ? oldPosition - discardLength : 0, SEEK_SET);
+		fBackPosition -= discardLength;
+		fStartOffset += discardLength;
 		SetBuffer(buffer);
 		return B_OK;
 	}
 
 	status_t EvaluatePosition(off_t position, off_t totalSize)
 	{
+		AutoReadLocker _(fLock);
+
 		if (position < 0)
 			return B_ERROR;
 
@@ -102,9 +139,12 @@ public:
 
 	virtual ssize_t ReadAt(off_t position, void* buffer, size_t size)
 	{
-		AutoReadLocker _(fLock);
+		AutoWriteLocker _(fLock);
 
-		return fBuffer->ReadAt(_PositionToRelative(position), buffer, size);
+		ssize_t bytesRead = fBuffer->ReadAt(_PositionToRelative(position), buffer, size);
+		if (bytesRead > 0 && position + bytesRead > fReadPosition)
+			fReadPosition = position + bytesRead;
+		return bytesRead;
 	}
 
 	virtual ssize_t WriteAt(off_t position, const void* buffer, size_t size)
@@ -152,8 +192,9 @@ public:
 	{
 		AutoWriteLocker _(fLock);
 
-		off_t ret = fBuffer->WriteAt(fBackPosition, buffer, size);
-		fBackPosition += ret;
+		ssize_t ret = fBuffer->WriteAt(fBackPosition, buffer, size);
+		if (ret > 0)
+			fBackPosition += ret;
 		return ret;
 	}
 
@@ -194,6 +235,7 @@ private:
 	BAdapterIO* fOwner;
 	off_t fBackPosition;
 	off_t fStartOffset;
+	off_t fReadPosition;
 
 	BPositionIO* fBuffer;
 
@@ -379,10 +421,10 @@ BAdapterIO::SetBuffer(BPositionIO* buffer)
 status_t
 BAdapterIO::FlushRead()
 {
-	BMallocIO* buffer = new BMallocIO();
-	BMallocIO* oldBuffer = (BMallocIO*)fBuffer->Buffer();
-	fBuffer->FlushRead(buffer, oldBuffer->Buffer(), oldBuffer->BufferLength());
-	return B_OK;
+	BMallocIO* buffer = new (std::nothrow) BMallocIO();
+	if (buffer == NULL)
+		return B_NO_MEMORY;
+	return fBuffer->FlushRead(buffer);
 }
 
 

@@ -20,6 +20,8 @@
 
 #include <HttpRequest.h>
 #include <Looper.h>
+#include <OS.h>
+#include <String.h>
 #include <UrlProtocolRoster.h>
 
 #include "AdapterIO.h"
@@ -85,6 +87,7 @@ public:
 	~StreamIO();
 
 	void SetLimiter(size_t limit = 0);
+	bool RequestEnded();
 
 	// BAdapterIO
 	status_t Open() override;
@@ -123,11 +126,13 @@ private:
 	Station* fStation;
 	BHttpRequest* fReq;
 	thread_id fReqThread;
+	int32 fStopping;
+	int32 fRequestEnded;
 	size_t fUnsynched;
 	size_t fMetaInt;
 	size_t fMetaSize;
-	off_t fUntilMetaStart;
-	off_t fUntilMetaEnd;
+	size_t fUntilMetaStart;
+	size_t fUntilMetaEnd;
 	BLooper* fMetaListener;
 	FrameSync fFrameSync;
 	size_t fLimit;
@@ -136,9 +141,8 @@ private:
 	DataFuncs fDataFuncs;
 	BInputAdapter* fInputAdapter;
 
-	const char* fIcyName;
-	bool fIsMutable;
-	char fMetaBuffer[512];
+	BString fIcyName;
+	char fMetaBuffer[4081];
 };
 
 

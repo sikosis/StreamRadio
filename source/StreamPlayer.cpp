@@ -21,6 +21,8 @@
 #include <MediaFile.h>
 #include <MediaTrack.h>
 
+#include <string.h>
+
 #include "Debug.h"
 #include "StreamIO.h"
 #include "StreamPlayer.h"
@@ -30,18 +32,37 @@
 #define B_TRANSLATION_CONTEXT "StreamPlayer"
 
 
+static const int32 kBufferFlushInterval = 512;
+
+
 StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 	: BLocker("StreamPlayer"),
 	  fStation(station),
 	  fNotify(notify),
+	  fNotificationsEnabled(notify != NULL ? 1 : 0),
 	  fMediaFile(NULL),
+	  fStream(NULL),
 	  fPlayer(NULL),
 	  fState(StreamPlayer::Stopped),
-	  fFlushCount(0)
+	  fInitStatus(B_NO_INIT),
+	  fStopRequested(0),
+	  fReconnectRequested(0),
+	  fReconnectAttempts(0),
+	  fDecodeFailures(0),
+	  fCodecInfo(),
+	  fDecodedFormat(),
+	  fHeader(),
+	  fInfo(),
+	  fFlushCount(0),
+	  fPlayThread(-1)
 {
 	TRACE("Trying to set player for stream %s\n", station->StreamUrl().UrlString().String());
 
 	fStream = new (std::nothrow) StreamIO(station, notify);
+	if (fStream == NULL) {
+		fInitStatus = B_NO_MEMORY;
+		return;
+	}
 	fInitStatus = fStream->Open();
 	if (fInitStatus != B_OK) {
 		MSG("Error retrieving stream from %s - %s\n", station->StreamUrl().UrlString().String(),
@@ -55,20 +76,22 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 
 StreamPlayer::~StreamPlayer()
 {
-	//_SetState(StreamPlayer::Stopped);
-	if (fInitStatus == B_OK && fPlayer != NULL)
-		fPlayer->Stop(true, false);
+	Stop();
+	if (fPlayThread >= B_OK && fPlayThread != find_thread(NULL)) {
+		status_t status;
+		wait_for_thread(fPlayThread, &status);
+	}
 
 	delete fPlayer;
-	delete fStream;
 	delete fMediaFile;
+	delete fStream;
 }
 
 
 status_t
 StreamPlayer::Play()
 {
-	switch (fState) {
+	switch (atomic_get(&fState)) {
 		case StreamPlayer::Playing:
 		case StreamPlayer::Buffering:
 		case StreamPlayer::InActive:
@@ -76,9 +99,23 @@ StreamPlayer::Play()
 
 		case StreamPlayer::Stopped:
 		{
+			if (fStream == NULL)
+				return fInitStatus;
+
 			thread_id playThreadId = spawn_thread((thread_func)StreamPlayer::_StartPlayThreadFunc,
 				fStation->Name()->String(), B_NORMAL_PRIORITY, this);
-			resume_thread(playThreadId);
+			if (playThreadId < B_OK)
+				return playThreadId;
+
+			fPlayThread = playThreadId;
+			atomic_set(&fStopRequested, 0);
+			_SetState(StreamPlayer::Buffering);
+			status_t status = resume_thread(playThreadId);
+			if (status != B_OK) {
+				fPlayThread = -1;
+				_SetState(StreamPlayer::Stopped);
+				return status;
+			}
 
 			break;
 		}
@@ -91,16 +128,18 @@ StreamPlayer::Play()
 status_t
 StreamPlayer::Stop()
 {
-	switch (fState) {
+	switch (atomic_get(&fState)) {
 		case StreamPlayer::Buffering:
-			fStopRequested = true;
+			atomic_set(&fStopRequested, 1);
 			break;
 
 		case StreamPlayer::Playing:
 		{
+			atomic_set(&fStopRequested, 1);
 			Lock();
 
 			if (fPlayer) {
+				fPlayer->SetHasData(false);
 				fPlayer->Stop(false, true);
 				delete fPlayer;
 				fPlayer = NULL;
@@ -157,15 +196,16 @@ StreamPlayer::SetVolume(float volume)
 void
 StreamPlayer::_SetState(StreamPlayer::PlayState state)
 {
-	if (fState != state)
-		fState = state;
+	if (atomic_get(&fState) == state)
+		return;
+	atomic_set(&fState, state);
 
-	if (fNotify != NULL) {
-		BMessage* notification = new BMessage(MSG_PLAYER_STATE_CHANGED);
+	if (atomic_get(&fNotificationsEnabled) != 0 && fNotify != NULL) {
+		BMessage notification(MSG_PLAYER_STATE_CHANGED);
 		BMessenger messenger(fNotify);
-		notification->AddPointer("player", this);
-		notification->AddInt32("state", fState);
-		messenger.SendMessage(notification, fNotify);
+		notification.AddPointer("player", this);
+		notification.AddInt32("state", state);
+		messenger.SendMessage(&notification);
 	}
 }
 
@@ -176,65 +216,207 @@ StreamPlayer::_GetDecodedChunk(
 {
 	StreamPlayer* player = (StreamPlayer*)cookie;
 	BMediaFile* fMediaFile = player->fMediaFile;
+	memset(buffer, 0, size);
+	if (fMediaFile == NULL || fMediaFile->CountTracks() == 0)
+		return;
 
-	int64 reqFrames
-		= size / format.channel_count / (format.format & media_raw_audio_format::B_AUDIO_SIZE_MASK);
-	fMediaFile->TrackAt(0)->ReadFrames(buffer, &reqFrames, &player->fHeader, &player->fInfo);
-
-	if (player->fFlushCount++ > 1000) {
-		player->fFlushCount = 0;
-		if (player->fStream)
-			player->fStream->FlushRead();
+	if (player->fStream == NULL || player->fStream->RequestEnded()) {
+		player->_ScheduleReconnect(B_IO_ERROR);
+		return;
 	}
+
+	uint32 bytesPerSample = format.format & media_raw_audio_format::B_AUDIO_SIZE_MASK;
+	if (format.channel_count == 0 || bytesPerSample == 0) {
+		player->_ScheduleReconnect(B_MEDIA_BAD_FORMAT);
+		return;
+	}
+
+	int64 requestedFrames = size / format.channel_count / bytesPerSample;
+	int64 decodedFrames = requestedFrames;
+	status_t status
+		= fMediaFile->TrackAt(0)->ReadFrames(buffer, &decodedFrames, &player->fHeader,
+			&player->fInfo);
+	if (player->fStream == NULL || player->fStream->RequestEnded() || status == B_TIMED_OUT) {
+		player->_ScheduleReconnect(status != B_OK ? status : B_IO_ERROR);
+		return;
+	}
+	if (status != B_OK || decodedFrames <= 0) {
+		if (atomic_add(&player->fDecodeFailures, 1) + 1 >= 3)
+			player->_ScheduleReconnect(status != B_OK ? status : B_IO_ERROR);
+		return;
+	}
+
+	atomic_set(&player->fDecodeFailures, 0);
+	atomic_set(&player->fReconnectAttempts, 0);
+
+	if (++player->fFlushCount >= kBufferFlushInterval) {
+		player->fFlushCount = 0;
+		status_t flushStatus = player->fStream->FlushRead();
+		if (flushStatus != B_OK)
+			player->_ScheduleReconnect(flushStatus);
+	}
+}
+
+
+void
+StreamPlayer::_ScheduleReconnect(status_t error)
+{
+	if (atomic_get(&fStopRequested) != 0 || atomic_get(&fReconnectRequested) != 0)
+		return;
+
+	bool stopAfterCleanup = atomic_get(&fReconnectAttempts) >= 3;
+	if (stopAfterCleanup) {
+		fInitStatus = error;
+		atomic_set(&fStopRequested, 1);
+		MSG("Stream recovery failed for %s after 3 attempts (%s)\n",
+			fStation->StreamUrl().UrlString().String(), strerror(error));
+	} else {
+		atomic_add(&fReconnectAttempts, 1);
+		MSG("Stream stopped for %s (%s); reconnecting (%" B_PRId32 "/3)...\n",
+			fStation->StreamUrl().UrlString().String(), strerror(error),
+			atomic_get(&fReconnectAttempts));
+	}
+
+	atomic_set(&fReconnectRequested, 1);
+	_SetState(StreamPlayer::Buffering);
+
+	thread_id reconnectThread = spawn_thread((thread_func)StreamPlayer::_ReconnectThreadFunc,
+		"StreamRadio reconnect", B_NORMAL_PRIORITY, this);
+	if (reconnectThread < B_OK) {
+		fInitStatus = reconnectThread;
+		atomic_set(&fReconnectRequested, 0);
+		_SetState(StreamPlayer::Stopped);
+		return;
+	}
+
+	fPlayThread = reconnectThread;
+	status_t status = resume_thread(reconnectThread);
+	if (status != B_OK) {
+		fInitStatus = status;
+		fPlayThread = -1;
+		atomic_set(&fReconnectRequested, 0);
+		_SetState(StreamPlayer::Stopped);
+	}
+}
+
+
+status_t
+StreamPlayer::_ReconnectThreadFunc(StreamPlayer* _this)
+{
+	snooze(1000000);
+
+	_this->Lock();
+	if (_this->fPlayer != NULL) {
+		_this->fPlayer->SetHasData(false);
+		_this->fPlayer->Stop(true, true);
+		delete _this->fPlayer;
+		_this->fPlayer = NULL;
+	}
+	if (_this->fMediaFile != NULL) {
+		_this->fMediaFile->CloseFile();
+		delete _this->fMediaFile;
+		_this->fMediaFile = NULL;
+	}
+
+	delete _this->fStream;
+	_this->fStream = NULL;
+	atomic_set(&_this->fDecodeFailures, 0);
+	_this->fFlushCount = 0;
+
+	if (atomic_get(&_this->fStopRequested) != 0) {
+		_this->Unlock();
+		atomic_set(&_this->fReconnectRequested, 0);
+		_this->_SetState(StreamPlayer::Stopped);
+		return B_CANCELED;
+	}
+
+	_this->fStream = new (std::nothrow) StreamIO(_this->fStation, _this->fNotify);
+	if (_this->fStream == NULL)
+		_this->fInitStatus = B_NO_MEMORY;
+	else
+		_this->fInitStatus = _this->fStream->Open();
+
+	status_t status = _this->fInitStatus;
+	_this->Unlock();
+
+	if (atomic_get(&_this->fStopRequested) != 0) {
+		atomic_set(&_this->fReconnectRequested, 0);
+		_this->_SetState(StreamPlayer::Stopped);
+		return status;
+	}
+	if (status != B_OK) {
+		atomic_set(&_this->fReconnectRequested, 0);
+		_this->_ScheduleReconnect(status);
+		return status;
+	}
+
+	atomic_set(&_this->fReconnectRequested, 0);
+	return _StartPlayThreadFunc(_this);
 }
 
 
 status_t
 StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 {
-	if (!_this->fStream)
-		return B_ERROR;
+	if (_this->fStream == NULL) {
+		_this->fInitStatus = B_NO_INIT;
+		_this->_SetState(StreamPlayer::Stopped);
+		return _this->fInitStatus;
+	}
 
 	_this->Lock();
 
 	_this->_SetState(StreamPlayer::Buffering);
-	_this->fStopRequested = false;
 	_this->fStream->SetLimiter(0x40000);
 	_this->fMediaFile = new (std::nothrow) BMediaFile(_this->fStream);
 
-	_this->fInitStatus = _this->fMediaFile->InitCheck();
+	if (_this->fMediaFile == NULL)
+		_this->fInitStatus = B_NO_MEMORY;
+	else
+		_this->fInitStatus = _this->fMediaFile->InitCheck();
 	if (_this->fInitStatus != B_OK) {
 		MSG("Error creating media extractor for %s - %s\n",
 			_this->fStation->StreamUrl().UrlString().String(), strerror(_this->fInitStatus));
 	}
 
-	if (_this->fInitStatus != B_OK || _this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		delete _this->fStream;
 		_this->fStream = NULL;
 		delete _this->fMediaFile;
 		_this->fMediaFile = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
 	_this->fStream->SetLimiter(0);
 
 	if (_this->fMediaFile->CountTracks() == 0) {
-		MSG("No track found inside stream %s - %s\n",
-			_this->fStation->StreamUrl().UrlString().String(), strerror(_this->fInitStatus));
+		_this->fInitStatus = B_MEDIA_BAD_FORMAT;
+		MSG("No track found inside stream %s\n",
+			_this->fStation->StreamUrl().UrlString().String());
 	}
 
-	if (_this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		delete _this->fMediaFile;
 		_this->fMediaFile = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
 	_this->fInitStatus = _this->fMediaFile->TrackAt(0)->GetCodecInfo(&_this->fCodecInfo);
@@ -243,14 +425,19 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 			_this->fStation->StreamUrl().UrlString().String(), strerror(_this->fInitStatus));
 	}
 
-	if (_this->fInitStatus != B_OK || _this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		delete _this->fMediaFile;
 		_this->fMediaFile = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
 	_this->fInitStatus = _this->fMediaFile->TrackAt(0)->DecodedFormat(&_this->fDecodedFormat);
@@ -258,14 +445,19 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 		MSG("Could not negotiate output format - %s\n", strerror(_this->fInitStatus));
 	}
 
-	if (_this->fInitStatus != B_OK || _this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		delete _this->fMediaFile;
 		_this->fMediaFile = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
 	TRACE("Found stream with %ld channels with %f Hz\n",
@@ -274,21 +466,32 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 
 	_this->fPlayer = new BSoundPlayer(&_this->fDecodedFormat.u.raw_audio,
 		_this->fStation->Name()->String(), &StreamPlayer::_GetDecodedChunk, NULL, _this);
+	if (_this->fPlayer == NULL) {
+		_this->fInitStatus = B_NO_MEMORY;
+		_this->Unlock();
+		_this->_ScheduleReconnect(_this->fInitStatus);
+		return _this->fInitStatus;
+	}
 
 	_this->fInitStatus = _this->fPlayer->InitCheck();
 	if (_this->fInitStatus != B_OK) {
 		MSG("Sound Player failed to initialize (%s)\r\n", strerror(_this->fInitStatus));
 	}
 
-	if (_this->fInitStatus != B_OK || _this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		_this->fPlayer->Stop(true, true);
 		delete _this->fPlayer;
 		_this->fPlayer = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
 	_this->fPlayer->Preroll();
@@ -298,16 +501,26 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 		MSG("Sound Player failed to start (%s)\r\n", strerror(_this->fInitStatus));
 	}
 
-	if (_this->fInitStatus != B_OK || _this->fStopRequested) {
+	if (_this->fInitStatus != B_OK || atomic_get(&_this->fStopRequested) != 0) {
 		delete _this->fPlayer;
 		_this->fPlayer = NULL;
 
+		status_t status = _this->fInitStatus;
+		bool shouldReconnect = status != B_OK && atomic_get(&_this->fStopRequested) == 0;
 		_this->Unlock();
-		_this->_SetState(StreamPlayer::Stopped);
+		if (shouldReconnect)
+			_this->_ScheduleReconnect(status);
+		else
+			_this->_SetState(StreamPlayer::Stopped);
 
-		return _this->fInitStatus;
+		return status;
 	}
 
+	if (atomic_get(&_this->fReconnectAttempts) > 0) {
+		MSG("Reconnected to stream %s\n",
+			_this->fStation->StreamUrl().UrlString().String());
+	}
+	_this->fPlayer->SetHasData(true);
 	_this->_SetState(StreamPlayer::Playing);
 	_this->Unlock();
 

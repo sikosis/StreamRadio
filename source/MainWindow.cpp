@@ -112,8 +112,10 @@ MainWindow::~MainWindow()
 	for (int32 i = 0; i < fStationList->CountItems(); i++) {
 		StationListViewItem* stationItem = fStationList->ItemAt(i);
 		StreamPlayer* player = stationItem->Player();
-		if (player != NULL)
+		if (player != NULL) {
+			player->DisableNotifications();
 			player->Stop();
+		}
 	}
 }
 

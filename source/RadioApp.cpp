@@ -106,14 +106,42 @@ RadioApp::AboutRequested()
 {
 	BAboutWindow* about = new BAboutWindow(B_TRANSLATE_SYSTEM_NAME("StreamRadio"), kAppSignature);
 
-	const char* kAuthors[] = {"Fishpond", "Humdinger", "Jacob Secunda", "Javier Steinaker",
-		"Adrien Destugues", "Máximo Castañeda", "Korli", "Jérôme Duval", NULL};
-
-	const char* kCopyright = "The HaikuArchives team";
+	const char* kCurrentContributors[] = {"Sikosis", NULL};
+	const char* kPastContributors[] = {"Fishpond", "Humdinger", "Jacob Secunda",
+		"Javier Steinaker", "Adrien Destugues", "Máximo Castañeda", "Korli",
+		"Jérôme Duval", NULL};
+	const char* kSpecialThanks[] = {"The Haiku Project",
+		"The Community Radio Browser project", "HaikuArchives contributors and translators",
+		NULL};
+	const char* kLicences[] = {
+		"StreamRadio — GNU General Public License, version 3 or later",
+		"https://www.gnu.org/licenses/gpl-3.0.html",
+		"AdapterIO compatibility code — Copyright 2016 Dario Casalinuovo "
+		"and Haiku, Inc.; MIT License",
+		NULL};
+	const char* kDependencies[] = {
+		"Haiku system C++ runtime and libraries: libbe, libtranslation, libbnetapi, "
+		"libmedia, liblocalestub, libnetservices and libshared. Licence texts: "
+		"/system/data/licenses",
+		"https://www.haiku-os.org/",
+		"Audio playback uses Haiku's Media Kit and installed media add-ons. This "
+		"commonly includes an FFmpeg-based media add-on. FFmpeg is LGPL 2.1 or later, "
+		"or GPL 2 or later when optional GPL components are enabled. Available codecs "
+		"and licences depend on the user's Haiku installation.",
+		"https://ffmpeg.org/",
+		"Community Radio Browser supplies the remote station directory. Its server "
+		"software is licensed under the GNU Affero General Public License, version 3.",
+		"https://www.radio-browser.info/", NULL};
+	const char* kSource[] = {"https://github.com/sikosis/StreamRadio", NULL};
 
 	about->AddDescription(B_TRANSLATE("A player for online radio."));
-	about->AddAuthors(kAuthors);
-	about->AddCopyright(2017, kCopyright, NULL);
+	about->AddCopyright(2008, "The StreamRadio contributors", NULL);
+	about->AddText("Current Contributor:", kCurrentContributors);
+	about->AddText("Past Contributors:", kPastContributors);
+	about->AddSpecialThanks(kSpecialThanks);
+	about->AddText("Licences and bundled code:", kLicences);
+	about->AddText("Runtime dependencies and services:", kDependencies);
+	about->AddText("Source code:", kSource);
 
 	about->Show();
 }

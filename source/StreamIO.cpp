@@ -21,6 +21,7 @@
 
 #define __USE_GNU
 #include <regex.h>
+#include <stdlib.h>
 
 #include <Catalog.h>
 #include <MediaIO.h>
@@ -48,6 +49,8 @@ StreamIO::StreamIO(Station* station, BLooper* metaListener)
 	  fStation(station),
 	  fReq(NULL),
 	  fReqThread(-1),
+	  fStopping(0),
+	  fRequestEnded(0),
 	  fUnsynched(0),
 	  fMetaInt(0),
 	  fMetaSize(0),
@@ -56,7 +59,9 @@ StreamIO::StreamIO(Station* station, BLooper* metaListener)
 	  fMetaListener(metaListener),
 	  fFrameSync(none),
 	  fLimit(0),
-	  fBuffered(0)
+	  fBuffered(0),
+	  fInputAdapter(NULL),
+	  fIcyName()
 {
 	BUrl url = station->StreamUrl();
 
@@ -124,10 +129,12 @@ StreamIO::StreamIO(Station* station, BLooper* metaListener)
 
 StreamIO::~StreamIO()
 {
-	if (fReqThread >= 0) {
+	thread_id requestThread = atomic_get(&fReqThread);
+	if (requestThread >= 0) {
+		atomic_set(&fStopping, 1);
 		fReq->Stop();
 		status_t status;
-		wait_for_thread(fReqThread, &status);
+		wait_for_thread(requestThread, &status);
 	}
 
 	delete fReq;
@@ -151,13 +158,16 @@ StreamIO::WriteAt(off_t position, const void* buffer, size_t size)
 ssize_t
 StreamIO::ReadAt(off_t position, void* buffer, size_t size)
 {
-	if (fLimit == 0 || (size_t)position < fLimit) {
+	if (fLimit == 0 || position < 0 || (size_t)position < fLimit) {
 		ssize_t read = BAdapterIO::ReadAt(position, buffer, size);
 		if (read > 0) {
 			TRACE("Read %" B_PRIdSSIZE " of %" B_PRIuSIZE " bytes from position %" B_PRIdOFF
 				  ", %" B_PRIuSIZE " remaining\n",
 				read, size, position, fBuffered);
-			fBuffered -= read;
+			if ((size_t)read < fBuffered)
+				fBuffered -= read;
+			else
+				fBuffered = 0;
 		} else {
 			TRACE("Reading %" B_PRIuSIZE " bytes from position %" B_PRIdOFF " failed - %s\n", size,
 				position, strerror(read));
@@ -186,6 +196,7 @@ StreamIO::Open()
 	if (fReq == NULL)
 		return B_ERROR;
 
+	atomic_set(&fRequestEnded, 0);
 	fReqThread = fReq->Run();
 	if (fReqThread < B_OK)
 		return B_ERROR;
@@ -197,7 +208,7 @@ StreamIO::Open()
 bool
 StreamIO::IsRunning() const
 {
-	return fReqThread >= 0;
+	return fReq != NULL && fReq->IsRunning();
 }
 
 
@@ -208,18 +219,30 @@ StreamIO::SetLimiter(size_t limit)
 }
 
 
+bool
+StreamIO::RequestEnded()
+{
+	return atomic_get(&fRequestEnded) != 0;
+}
+
+
 void
 StreamIO::HeadersReceived(BUrlRequest* request)
 {
 	BHttpRequest* httpReq = dynamic_cast<BHttpRequest*>(request);
 	const BHttpResult* httpResult = dynamic_cast<const BHttpResult*>(&request->Result());
+	if (httpReq == NULL || httpResult == NULL)
+		return;
 
 	if (httpReq->IsRedirectionStatusCode(httpResult->StatusCode())) {
+		const char* location = httpResult->Headers()["location"];
+		if (location == NULL)
+			return;
 		if (httpResult->StatusCode() == 301) {	// Permanent redirect
-			fStation->SetStreamUrl(httpResult->Headers()["location"]);
-			TRACE("Permanently redirected to %s\n", httpResult->Headers()["location"]);
+			fStation->SetStreamUrl(location);
+			TRACE("Permanently redirected to %s\n", location);
 		} else
-			TRACE("Redirected to %s\n", httpResult->Headers()["location"]);
+			TRACE("Redirected to %s\n", location);
 
 		return;
 	}
@@ -227,15 +250,18 @@ StreamIO::HeadersReceived(BUrlRequest* request)
 	off_t size = httpResult->Length();
 	if (size > 0)
 		BAdapterIO::SetSize(size);
-	else
-		fIsMutable = true;
 
 	const char* sMetaInt = httpResult->Headers()["icy-metaint"];
-	fIcyName = httpResult->Headers()["icy-name"];
+	const char* icyName = httpResult->Headers()["icy-name"];
+	if (icyName != NULL)
+		fIcyName = icyName;
 	if (sMetaInt != NULL) {
-		fMetaInt = atoi(sMetaInt);
-		fUntilMetaStart = fMetaInt;
-		fDataFuncs.Add(&StreamIO::_DataWithMetaReceived, 0);
+		long metaInterval = strtol(sMetaInt, NULL, 10);
+		if (metaInterval > 0) {
+			fMetaInt = metaInterval;
+			fUntilMetaStart = fMetaInt;
+			fDataFuncs.Add(&StreamIO::_DataWithMetaReceived, 0);
+		}
 	}
 }
 
@@ -244,7 +270,8 @@ ssize_t
 StreamIO::_DataSyncedReceived(const char* data, size_t size, int next)
 {
 	ssize_t written = fInputAdapter->Write(data, size);
-	fBuffered += written;
+	if (written > 0)
+		fBuffered += written;
 	return written;
 }
 
@@ -257,7 +284,7 @@ StreamIO::_DataWithMetaReceived(const char* data, size_t size, int next)
 	while (size > 0) {
 		if (fUntilMetaEnd != 0) {
 			// We are reading metadata
-			if ((size_t)fUntilMetaEnd <= size) {
+			if (fUntilMetaEnd <= size) {
 				// The metadata ends before the buffer
 				memcpy(fMetaBuffer + fMetaSize, (void*)data, fUntilMetaEnd);
 
@@ -284,7 +311,7 @@ StreamIO::_DataWithMetaReceived(const char* data, size_t size, int next)
 		} else {
 			// No metadata right now, feed content to consumer
 			DataFunc nextFunc = fDataFuncs.Item(next);
-			if (size <= (size_t)fUntilMetaStart) {
+			if (size <= fUntilMetaStart) {
 				written += (*this.*nextFunc)(data, size, next + 1);
 
 				fUntilMetaStart -= size;
@@ -296,18 +323,10 @@ StreamIO::_DataWithMetaReceived(const char* data, size_t size, int next)
 				data += fUntilMetaStart;
 
 				fUntilMetaStart = 0;
-				fUntilMetaEnd = *data * 16;
+				fUntilMetaEnd = (uint8)*data * 16;
 				if (fUntilMetaEnd == 0) {
 					fUntilMetaStart = fMetaInt;
 					TRACE("Meta: Empty\n");
-				} else if (fUntilMetaEnd > 512) {
-					TRACE("Meta: Size of %" B_PRIdOFF " too large\n", fUntilMetaEnd);
-
-					fUntilMetaStart = fMetaInt;
-					fUntilMetaEnd = 0;
-					data--;
-					size++;
-					written--;
 				}
 
 				data++;
@@ -324,8 +343,8 @@ StreamIO::_DataWithMetaReceived(const char* data, size_t size, int next)
 ssize_t
 StreamIO::_DataUnsyncedReceived(const char* data, size_t size, int next)
 {
-	off_t frameStart;
-	for (frameStart = 0; frameStart < (off_t)size; frameStart++) {
+	size_t frameStart;
+	for (frameStart = 0; frameStart < size; frameStart++) {
 		if (fFrameSync == none) {
 			if (data[frameStart] == kMpegHeader1) {
 				fFrameSync = first;
@@ -366,14 +385,19 @@ StreamIO::Write(const void* buffer, size_t size)
 
 
 void
-StreamIO::RequestCompleted(BUrlRequest* request, bool success)
+StreamIO::RequestCompleted(BUrlRequest*, bool success)
 {
-	fReqThread = -1;
+	atomic_set(&fRequestEnded, 1);
+	if (atomic_get(&fStopping) == 0) {
+		MSG("HTTP stream request ended unexpectedly for %s (%s)\n",
+			fStation->StreamUrl().UrlString().String(),
+			success ? "end of stream" : "request failed");
+	}
 }
 
 
 void
-StreamIO::DebugMessage(BUrlRequest* caller, BUrlProtocolDebugMessage type, const char* text)
+StreamIO::DebugMessage(BUrlRequest*, BUrlProtocolDebugMessage, const char* text)
 {
 	DEBUG("Debug Message: %s\n", text);
 }
@@ -390,12 +414,14 @@ StreamIO::_ProcessMeta()
 	regmatch_t matches[4];
 	regex_t regex;
 
-	BMessage* msg = new BMessage(MSG_META_CHANGE);
-	msg->AddString("station", fStation->Name()->String());
+	BMessage msg(MSG_META_CHANGE);
+	msg.AddString("station", fStation->Name()->String());
 
 	int res = regcomp(&regex, "([^=]*)='(([^']|'[^;])*)';",
 		RE_ICASE | RE_DOT_NEWLINE | RE_DOT_NOT_NULL | RE_NO_BK_PARENS | RE_NO_BK_VBAR
 			| RE_BACKSLASH_ESCAPE_IN_LISTS);
+	if (res != 0)
+		return;
 
 	char* text = fMetaBuffer;
 	while ((res = regexec(&regex, text, 3, matches, 0)) == 0) {
@@ -403,13 +429,13 @@ StreamIO::_ProcessMeta()
 		text[matches[2].rm_eo] = 0;
 
 		if (text[matches[2].rm_so] == 0)
-			msg->AddString(strlwr(text + matches[1].rm_so), fIcyName);
+			msg.AddString(strlwr(text + matches[1].rm_so), fIcyName.String());
 		else
-			msg->AddString(strlwr(text + matches[1].rm_so), text + matches[2].rm_so);
+			msg.AddString(strlwr(text + matches[1].rm_so), text + matches[2].rm_so);
 
 		text += matches[0].rm_eo;
 	}
 	regfree(&regex);
 
-	fMetaListener->PostMessage(msg);
+	fMetaListener->PostMessage(&msg);
 }
