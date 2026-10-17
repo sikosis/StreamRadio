@@ -17,6 +17,7 @@
 #include <InterfaceDefs.h>
 #include <LayoutBuilder.h>
 #include <Message.h>
+#include <Roster.h>
 #include <SeparatorView.h>
 #include <String.h>
 #include <StringView.h>
