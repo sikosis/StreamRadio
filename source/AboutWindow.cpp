@@ -133,7 +133,6 @@ CreateCreditsView()
 			"Adrien Destugues, Máximo Castañeda, Korli, Jérôme Duval"))
 		.AddStrut(8.0f)
 		.Add(Heading("thanks heading", B_TRANSLATE("Special Thanks")))
-		.Add(new BStringView("haiku thanks", "The Haiku Project"))
 		.Add(new BStringView("radio browser thanks",
 			"The Community Radio Browser project"))
 		.Add(new BStringView("archive thanks",
@@ -163,13 +162,6 @@ CreateLicencesView()
 			"Copyright 2016 Dario Casalinuovo and Haiku, Inc.; MIT License"))
 		.Add(new LinkView("mit link", "MIT License",
 			"https://opensource.org/license/mit"))
-		.AddStrut(5.0f)
-		.Add(Heading("haiku dependency heading", "Haiku system libraries"))
-		.Add(new BStringView("haiku dependencies",
-			"libbe, libtranslation, libbnetapi, libmedia, liblocalestub,"))
-		.Add(new BStringView("haiku dependencies continued",
-			"libnetservices and libshared. Installed texts: /system/data/licenses"))
-		.Add(new LinkView("haiku link", "The Haiku Project", "https://www.haiku-os.org/"))
 		.AddStrut(5.0f)
 		.Add(Heading("ffmpeg dependency heading", "Media codecs"))
 		.Add(new BStringView("ffmpeg dependency",
