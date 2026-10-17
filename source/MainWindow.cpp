@@ -361,10 +361,8 @@ MainWindow::MessageReceived(BMessage* message)
 			if (fSleepTimerWindow == NULL) {
 				fSleepTimerWindow = new SleepTimerWindow(this);
 				fSleepTimerWindow->Show();
-			} else if (fSleepTimerWindow->Lock()) {
-				fSleepTimerWindow->Activate(true);
-				fSleepTimerWindow->Unlock();
-			}
+			} else
+				fSleepTimerWindow->ActivateWindow();
 			break;
 
 		case MSG_SLEEP_TIMER_SET:

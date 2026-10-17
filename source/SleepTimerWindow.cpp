@@ -22,6 +22,7 @@
 
 static const uint32 kSetTimer = 'sTGO';
 static const uint32 kCloseWindow = 'sTXX';
+static const uint32 kActivateWindow = 'sTAC';
 
 
 static BMenuItem*
@@ -88,6 +89,13 @@ SleepTimerWindow::SleepTimerWindow(BWindow* parent)
 
 
 void
+SleepTimerWindow::ActivateWindow()
+{
+	PostMessage(kActivateWindow);
+}
+
+
+void
 SleepTimerWindow::MessageReceived(BMessage* message)
 {
 	switch (message->what) {
@@ -103,6 +111,10 @@ SleepTimerWindow::MessageReceived(BMessage* message)
 
 		case kCloseWindow:
 			PostMessage(B_QUIT_REQUESTED);
+			break;
+
+		case kActivateWindow:
+			Activate(true);
 			break;
 
 		default:

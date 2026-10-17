@@ -32,6 +32,7 @@ class SleepTimerWindow : public BWindow {
 public:
 	SleepTimerWindow(BWindow* parent);
 
+	void ActivateWindow();
 	virtual void MessageReceived(BMessage* message);
 	virtual bool QuitRequested();
 
