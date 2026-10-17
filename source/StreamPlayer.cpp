@@ -33,6 +33,8 @@
 
 
 static const int32 kBufferFlushInterval = 512;
+static const bigtime_t kPlaybackStallTimeout = 15000000;
+static const bigtime_t kWatchdogInterval = 1000000;
 
 
 StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
@@ -49,12 +51,15 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 	  fReconnectRequested(0),
 	  fReconnectAttempts(0),
 	  fDecodeFailures(0),
+	  fProgressLock("StreamPlayer progress"),
+	  fLastPlaybackProgress(system_time()),
 	  fCodecInfo(),
 	  fDecodedFormat(),
 	  fHeader(),
 	  fInfo(),
 	  fFlushCount(0),
-	  fPlayThread(-1)
+	  fPlayThread(-1),
+	  fWatchdogThread(-1)
 {
 	TRACE("Trying to set player for stream %s\n", station->StreamUrl().UrlString().String());
 
@@ -77,6 +82,10 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 StreamPlayer::~StreamPlayer()
 {
 	Stop();
+	if (fWatchdogThread >= B_OK && fWatchdogThread != find_thread(NULL)) {
+		status_t status;
+		wait_for_thread(fWatchdogThread, &status);
+	}
 	if (fPlayThread >= B_OK && fPlayThread != find_thread(NULL)) {
 		status_t status;
 		wait_for_thread(fPlayThread, &status);
@@ -107,11 +116,31 @@ StreamPlayer::Play()
 			if (playThreadId < B_OK)
 				return playThreadId;
 
+			thread_id watchdogThreadId = spawn_thread(
+				(thread_func)StreamPlayer::_WatchdogThreadFunc, "StreamRadio watchdog",
+				B_NORMAL_PRIORITY, this);
+
 			fPlayThread = playThreadId;
+			if (watchdogThreadId >= B_OK)
+				fWatchdogThread = watchdogThreadId;
+			else
+				MSG("Could not create stream watchdog: %s\n", strerror(watchdogThreadId));
+
 			atomic_set(&fStopRequested, 0);
+			_MarkPlaybackProgress();
 			_SetState(StreamPlayer::Buffering);
+
+			if (watchdogThreadId >= B_OK) {
+				status_t watchdogStatus = resume_thread(watchdogThreadId);
+				if (watchdogStatus != B_OK) {
+					fWatchdogThread = -1;
+					MSG("Could not start stream watchdog: %s\n", strerror(watchdogStatus));
+				}
+			}
+
 			status_t status = resume_thread(playThreadId);
 			if (status != B_OK) {
+				atomic_set(&fStopRequested, 1);
 				fPlayThread = -1;
 				_SetState(StreamPlayer::Stopped);
 				return status;
@@ -128,14 +157,14 @@ StreamPlayer::Play()
 status_t
 StreamPlayer::Stop()
 {
+	atomic_set(&fStopRequested, 1);
+
 	switch (atomic_get(&fState)) {
 		case StreamPlayer::Buffering:
-			atomic_set(&fStopRequested, 1);
 			break;
 
 		case StreamPlayer::Playing:
 		{
-			atomic_set(&fStopRequested, 1);
 			Lock();
 
 			if (fPlayer) {
@@ -194,6 +223,28 @@ StreamPlayer::SetVolume(float volume)
 
 
 void
+StreamPlayer::_MarkPlaybackProgress()
+{
+	if (fProgressLock.Lock()) {
+		fLastPlaybackProgress = system_time();
+		fProgressLock.Unlock();
+	}
+}
+
+
+bigtime_t
+StreamPlayer::_LastPlaybackProgress()
+{
+	bigtime_t progress = 0;
+	if (fProgressLock.Lock()) {
+		progress = fLastPlaybackProgress;
+		fProgressLock.Unlock();
+	}
+	return progress;
+}
+
+
+void
 StreamPlayer::_SetState(StreamPlayer::PlayState state)
 {
 	if (atomic_get(&fState) == state)
@@ -248,6 +299,7 @@ StreamPlayer::_GetDecodedChunk(
 
 	atomic_set(&player->fDecodeFailures, 0);
 	atomic_set(&player->fReconnectAttempts, 0);
+	player->_MarkPlaybackProgress();
 
 	if (++player->fFlushCount >= kBufferFlushInterval) {
 		player->fFlushCount = 0;
@@ -255,6 +307,33 @@ StreamPlayer::_GetDecodedChunk(
 		if (flushStatus != B_OK)
 			player->_ScheduleReconnect(flushStatus);
 	}
+}
+
+
+status_t
+StreamPlayer::_WatchdogThreadFunc(StreamPlayer* _this)
+{
+	MSG("Playback watchdog armed for %s (%.0f second timeout)\n",
+		_this->fStation->StreamUrl().UrlString().String(),
+		kPlaybackStallTimeout / 1000000.0);
+
+	while (atomic_get(&_this->fStopRequested) == 0) {
+		snooze(kWatchdogInterval);
+		if (atomic_get(&_this->fStopRequested) != 0)
+			break;
+		if (_this->State() != StreamPlayer::Playing)
+			continue;
+
+		bigtime_t stalledFor = system_time() - _this->_LastPlaybackProgress();
+		if (stalledFor >= kPlaybackStallTimeout) {
+			MSG("Playback stalled for %.1f seconds on %s; reconnecting...\n",
+				stalledFor / 1000000.0,
+				_this->fStation->StreamUrl().UrlString().String());
+			_this->_ScheduleReconnect(B_TIMED_OUT);
+		}
+	}
+
+	return B_OK;
 }
 
 
@@ -521,6 +600,7 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 			_this->fStation->StreamUrl().UrlString().String());
 	}
 	_this->fPlayer->SetHasData(true);
+	_this->_MarkPlaybackProgress();
 	_this->_SetState(StreamPlayer::Playing);
 	_this->Unlock();
 

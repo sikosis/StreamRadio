@@ -18,6 +18,7 @@
 #define _STREAM_PLAYER_H
 
 
+#include <Locker.h>
 #include <MediaFile.h>
 #include <OS.h>
 #include <SoundPlayer.h>
@@ -60,9 +61,12 @@ public:
 
 private:
 	void _SetState(PlayState state);
+	void _MarkPlaybackProgress();
+	bigtime_t _LastPlaybackProgress();
 
 	static status_t _StartPlayThreadFunc(StreamPlayer* _this);
 	static status_t _ReconnectThreadFunc(StreamPlayer* _this);
+	static status_t _WatchdogThreadFunc(StreamPlayer* _this);
 	static void _GetDecodedChunk(
 		void* cookie, void* buffer, size_t size, const media_raw_audio_format& format);
 	void _ScheduleReconnect(status_t error);
@@ -81,6 +85,8 @@ private:
 	int32 fReconnectRequested;
 	int32 fReconnectAttempts;
 	int32 fDecodeFailures;
+	BLocker fProgressLock;
+	bigtime_t fLastPlaybackProgress;
 
 	media_codec_info fCodecInfo;
 	media_format fDecodedFormat;
@@ -88,6 +94,7 @@ private:
 	media_decode_info fInfo;
 	int32 fFlushCount;
 	thread_id fPlayThread;
+	thread_id fWatchdogThread;
 };
 
 

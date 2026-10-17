@@ -37,7 +37,7 @@
 const char kMpegHeader1 = '\xff';
 const char kMpegHeader2 = '\xe0';
 
-#define HTTP_TIMEOUT 30000000
+#define HTTP_TIMEOUT 15000000
 
 
 #undef B_TRANSLATION_CONTEXT
