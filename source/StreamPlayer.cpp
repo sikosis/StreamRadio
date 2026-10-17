@@ -35,7 +35,9 @@
 static const int32 kBufferFlushInterval = 512;
 static const bigtime_t kPlaybackStallTimeout = 15000000;
 static const bigtime_t kNetworkStallTimeout = 30000000;
-static const bigtime_t kWatchdogInterval = 1000000;
+static const bigtime_t kWatchdogInterval = 500000;
+static const off_t kMinimumBufferTarget = 32 * 1024;
+static const off_t kMaximumBufferTarget = 256 * 1024;
 
 
 StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
@@ -52,6 +54,7 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 	  fReconnectRequested(0),
 	  fReconnectAttempts(0),
 	  fDecodeFailures(0),
+	  fRebuffering(0),
 	  fProgressLock("StreamPlayer progress"),
 	  fLastPlaybackProgress(system_time()),
 	  fLastNetworkProgress(system_time()),
@@ -161,11 +164,10 @@ status_t
 StreamPlayer::Stop()
 {
 	atomic_set(&fStopRequested, 1);
+	atomic_set(&fRebuffering, 0);
 
 	switch (atomic_get(&fState)) {
 		case StreamPlayer::Buffering:
-			break;
-
 		case StreamPlayer::Playing:
 		{
 			Lock();
@@ -269,6 +271,27 @@ StreamPlayer::_LastNetworkProgress()
 }
 
 
+off_t
+StreamPlayer::_BufferHighWater()
+{
+	// Keep roughly three seconds of compressed audio ready. Stations do not
+	// always report a bitrate, so clamp the target to useful live-stream bounds.
+	off_t target = (off_t)fStation->BitRate() * 3 / 8;
+	if (target < kMinimumBufferTarget)
+		return kMinimumBufferTarget;
+	if (target > kMaximumBufferTarget)
+		return kMaximumBufferTarget;
+	return target;
+}
+
+
+off_t
+StreamPlayer::_BufferLowWater()
+{
+	return _BufferHighWater() / 2;
+}
+
+
 void
 StreamPlayer::_NetworkProgressFunc(void* cookie)
 {
@@ -355,12 +378,61 @@ StreamPlayer::_WatchdogThreadFunc(StreamPlayer* _this)
 		snooze(kWatchdogInterval);
 		if (atomic_get(&_this->fStopRequested) != 0)
 			break;
+
+		bigtime_t now = system_time();
+		bigtime_t networkIdleFor = now - _this->_LastNetworkProgress();
+		off_t bufferHighWater = _this->_BufferHighWater();
+		if (atomic_get(&_this->fRebuffering) != 0) {
+			if (networkIdleFor >= kNetworkStallTimeout) {
+				atomic_set(&_this->fRebuffering, 0);
+				_this->_ScheduleReconnect(B_TIMED_OUT);
+				continue;
+			}
+
+			_this->Lock();
+			if (_this->fStream == NULL || _this->fStream->RequestEnded()) {
+				_this->Unlock();
+				atomic_set(&_this->fRebuffering, 0);
+				_this->_ScheduleReconnect(B_IO_ERROR);
+				continue;
+			}
+			off_t buffered = _this->fStream->BufferedBytes();
+			if (buffered >= bufferHighWater && _this->fPlayer != NULL) {
+				MSG("Stream buffer refilled to %.1f KiB for %s; resuming playback\n",
+					buffered / 1024.0,
+					_this->fStation->StreamUrl().UrlString().String());
+				_this->_MarkPlaybackProgress();
+				atomic_set(&_this->fRebuffering, 0);
+				_this->fPlayer->SetHasData(true);
+				_this->_SetState(StreamPlayer::Playing);
+			}
+			_this->Unlock();
+			continue;
+		}
+
 		if (_this->State() != StreamPlayer::Playing)
 			continue;
 
-		bigtime_t now = system_time();
+		_this->Lock();
+		if (_this->State() != StreamPlayer::Playing
+			|| atomic_get(&_this->fReconnectRequested) != 0) {
+			_this->Unlock();
+			continue;
+		}
+		off_t buffered = _this->fStream != NULL ? _this->fStream->BufferedBytes() : 0;
+		if (buffered < _this->_BufferLowWater() && _this->fPlayer != NULL) {
+			MSG("Stream buffer low for %s (%.1f KiB); buffering to %.1f KiB...\n",
+				_this->fStation->StreamUrl().UrlString().String(), buffered / 1024.0,
+				bufferHighWater / 1024.0);
+			_this->fPlayer->SetHasData(false);
+			atomic_set(&_this->fRebuffering, 1);
+			_this->_SetState(StreamPlayer::Buffering);
+			_this->Unlock();
+			continue;
+		}
+		_this->Unlock();
+
 		bigtime_t playbackIdleFor = now - _this->_LastPlaybackProgress();
-		bigtime_t networkIdleFor = now - _this->_LastNetworkProgress();
 		if (playbackIdleFor >= kPlaybackStallTimeout
 			|| networkIdleFor >= kNetworkStallTimeout) {
 			MSG("Stream stalled on %s (decoder %.1fs, network %.1fs); reconnecting...\n",
@@ -394,6 +466,7 @@ StreamPlayer::_ScheduleReconnect(status_t error)
 	}
 
 	atomic_set(&fReconnectRequested, 1);
+	atomic_set(&fRebuffering, 0);
 	_SetState(StreamPlayer::Buffering);
 
 	thread_id reconnectThread = spawn_thread((thread_func)StreamPlayer::_ReconnectThreadFunc,
@@ -612,6 +685,7 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 		return status;
 	}
 
+	_this->fPlayer->SetHasData(false);
 	_this->fPlayer->Preroll();
 
 	_this->fInitStatus = _this->fPlayer->Start();
@@ -638,9 +712,19 @@ StreamPlayer::_StartPlayThreadFunc(StreamPlayer* _this)
 		MSG("Reconnected to stream %s\n",
 			_this->fStation->StreamUrl().UrlString().String());
 	}
-	_this->fPlayer->SetHasData(true);
-	_this->_MarkPlaybackProgress();
-	_this->_SetState(StreamPlayer::Playing);
+	off_t buffered = _this->fStream->BufferedBytes();
+	off_t bufferTarget = _this->_BufferHighWater();
+	if (buffered < bufferTarget) {
+		MSG("Building stream buffer for %s (%.1f of %.1f KiB)...\n",
+			_this->fStation->StreamUrl().UrlString().String(), buffered / 1024.0,
+			bufferTarget / 1024.0);
+		atomic_set(&_this->fRebuffering, 1);
+		_this->_SetState(StreamPlayer::Buffering);
+	} else {
+		_this->fPlayer->SetHasData(true);
+		_this->_MarkPlaybackProgress();
+		_this->_SetState(StreamPlayer::Playing);
+	}
 	_this->Unlock();
 
 	return _this->fInitStatus;

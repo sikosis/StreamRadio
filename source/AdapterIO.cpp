@@ -16,6 +16,7 @@
 
 #define TIMEOUT_QUANTA 100000
 #define STREAM_HISTORY_SIZE (512 * 1024)
+#define STREAM_COMPACTION_THRESHOLD (2 * 1024 * 1024)
 
 
 class RelativePositionIO : public BPositionIO {
@@ -61,7 +62,11 @@ public:
 		// furthest absolute read position and retain a history window for codecs
 		// which need to inspect earlier frames.
 		off_t discardLength = fReadPosition - fStartOffset - STREAM_HISTORY_SIZE;
-		if (discardLength <= 0) {
+		// BMallocIO grows as required. Compact only after enough consumed data
+		// has accumulated to justify copying the retained history and unread
+		// bytes. This avoids periodically pausing both the network and decoder
+		// threads for small buffer reclamations.
+		if (discardLength < STREAM_COMPACTION_THRESHOLD) {
 			delete buffer;
 			return B_OK;
 		}
@@ -113,6 +118,9 @@ public:
 
 	status_t WaitForData(off_t position, off_t size)
 	{
+		if (size == 0)
+			return B_OK;
+
 		off_t bufferSize = 0;
 		status_t ret = GetSize(&bufferSize);
 		if (ret != B_OK)
@@ -120,7 +128,11 @@ public:
 
 		bigtime_t totalTimeOut = 0;
 
-		while (bufferSize < position + size) {
+		// BPositionIO permits partial reads. Waiting for the complete decoder
+		// request can block the real-time sound callback for seconds on a live
+		// stream. Wait only until at least one byte is available; ReadAt() will
+		// then return as much of the requested range as is currently buffered.
+		while (bufferSize <= position) {
 			// We are not running, no luck to receive
 			// more data, let's return and avoid locking.
 			if (!fOwner->IsRunning())
@@ -196,6 +208,16 @@ public:
 		if (ret > 0)
 			fBackPosition += ret;
 		return ret;
+	}
+
+	off_t BufferedBytes() const
+	{
+		AutoReadLocker _(fLock);
+
+		off_t readPosition = fReadPosition - fStartOffset;
+		if (readPosition < 0 || readPosition >= fBackPosition)
+			return 0;
+		return fBackPosition - readPosition;
 	}
 
 	void SetBuffer(BPositionIO* buffer)
@@ -425,6 +447,13 @@ BAdapterIO::FlushRead()
 	if (buffer == NULL)
 		return B_NO_MEMORY;
 	return fBuffer->FlushRead(buffer);
+}
+
+
+off_t
+BAdapterIO::BufferedBytes() const
+{
+	return fBuffer->BufferedBytes();
 }
 
 

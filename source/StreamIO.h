@@ -90,6 +90,7 @@ public:
 
 	void SetLimiter(size_t limit = 0);
 	bool RequestEnded();
+	off_t BufferedBytes() const;
 
 	// BAdapterIO
 	status_t Open() override;

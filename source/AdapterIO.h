@@ -59,6 +59,7 @@ public:
 	status_t SetBuffer(BPositionIO* buffer);
 
 	status_t FlushRead();
+	off_t BufferedBytes() const;
 
 	BInputAdapter* BuildInputAdapter();
 

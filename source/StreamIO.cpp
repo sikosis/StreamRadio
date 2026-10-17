@@ -229,6 +229,13 @@ StreamIO::RequestEnded()
 }
 
 
+off_t
+StreamIO::BufferedBytes() const
+{
+	return BAdapterIO::BufferedBytes();
+}
+
+
 void
 StreamIO::HeadersReceived(BUrlRequest* request)
 {

@@ -65,6 +65,8 @@ private:
 	void _MarkNetworkProgress();
 	bigtime_t _LastPlaybackProgress();
 	bigtime_t _LastNetworkProgress();
+	off_t _BufferLowWater();
+	off_t _BufferHighWater();
 
 	static void _NetworkProgressFunc(void* cookie);
 	static status_t _StartPlayThreadFunc(StreamPlayer* _this);
@@ -88,6 +90,7 @@ private:
 	int32 fReconnectRequested;
 	int32 fReconnectAttempts;
 	int32 fDecodeFailures;
+	int32 fRebuffering;
 	BLocker fProgressLock;
 	bigtime_t fLastPlaybackProgress;
 	bigtime_t fLastNetworkProgress;
