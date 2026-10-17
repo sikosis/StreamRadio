@@ -8,7 +8,7 @@ add stations to your collection, inspect and edit station details, and control
 the volume of each stream. StreamRadio also supports direct Shoutcast URLs and
 optional parallel playback of multiple stations.
 
-![StreamRadio station list and station information](docs/screenshots/05_Station_Info.png)
+![StreamRadio station list and station information](docs/screenshots/StreamRadio.png)
 
 ---
 
