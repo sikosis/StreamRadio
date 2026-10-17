@@ -25,6 +25,7 @@
 #include <String.h>
 #include <StringView.h>
 #include <TabView.h>
+#include <TranslationUtils.h>
 #include <Url.h>
 #include <View.h>
 
@@ -60,9 +61,14 @@ private:
 static BBitmap*
 LoadAppIcon()
 {
+	// The primary HVIF is deliberately compact for Tracker and Deskbar, but the
+	// About window has enough room to show the full-resolution artwork.
+	BBitmap* icon = BTranslationUtils::GetBitmap(B_PNG_FORMAT, "about-icon.png");
+	if (icon != NULL)
+		return icon;
+
 	const int32 iconSize = 96;
-	BBitmap* icon
-		= new BBitmap(BRect(0, 0, iconSize - 1, iconSize - 1), B_RGBA32);
+	icon = new BBitmap(BRect(0, 0, iconSize - 1, iconSize - 1), B_RGBA32);
 	if (icon->InitCheck() == B_OK) {
 		BResources* resources = BApplication::AppResources();
 		if (resources != NULL) {
@@ -106,7 +112,7 @@ LoadAppIcon()
 static BString
 AppVersion()
 {
-	BString version(B_TRANSLATE("Version 1.1.0"));
+	BString version(B_TRANSLATE("Version 1.1.1"));
 	app_info appInfo;
 	if (be_app->GetAppInfo(&appInfo) != B_OK)
 		return version;

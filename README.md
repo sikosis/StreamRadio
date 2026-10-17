@@ -1,4 +1,4 @@
-# ![StreamRadio icon](docs/icon.png) StreamRadio [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-1.1.0-orange)
+# ![StreamRadio icon](docs/icon.png) StreamRadio [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-1.1.1-orange)
 
 StreamRadio is a native Haiku application for finding and listening to internet
 radio stations.
@@ -72,13 +72,13 @@ make package
 The package is written to:
 
 ```text
-dist/StreamRadio-1.1.0-<architecture>.hpkg
+dist/StreamRadio-1.1.1-<architecture>.hpkg
 ```
 
 Install it with `pkgman`, substituting the generated filename:
 
 ```sh
-pkgman install ./dist/StreamRadio-1.1.0-x86_64.hpkg
+pkgman install ./dist/StreamRadio-1.1.1-x86_64.hpkg
 ```
 
 > [!WARNING]

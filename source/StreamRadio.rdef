@@ -2,7 +2,7 @@
 resource app_signature "application/x-vnd.Fishpond-StreamRadio";
 
 resource app_version {
-	major = 1, middle = 1, minor = 0,
+	major = 1, middle = 1, minor = 1,
 	variety = B_APPV_FINAL, internal = 0,
 	short_info="A player for online radio",
 	long_info="Find and stream online radio stations"
@@ -14,6 +14,8 @@ resource file_types message {
 };
 
 resource app_flags B_SINGLE_LAUNCH;
+
+resource(100, "about-icon.png") #'PNG ' import "../graphics/Radio.png";
 
 resource vector_icon array {
 	$"6e63696615011a2630ff01ffd62aff01ffb900ff0117232cff02000203320008"
