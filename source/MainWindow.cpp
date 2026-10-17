@@ -322,7 +322,7 @@ MainWindow::MessageReceived(BMessage* message)
 		case MSG_HELP:
 		{
 			BUrl userguide(
-				"https://github.com/HaikuArchives/"
+				"https://github.com/sikosis/"
 				"StreamRadio/blob/master/docs/userguide.md",
 				true);
 
