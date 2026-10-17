@@ -138,7 +138,7 @@ LINKER_FLAGS =
 #	Specify the version of this binary. Example:
 #		-app 3 4 0 d 0 -short 340 -long "340 "`echo -n -e '\302\251'`"1999 GNU GPL"
 #	This may also be specified in a resource.
-APP_VERSION =
+APP_VERSION = 1.1.0
 
 
 TARGET_DIR := ../dist
@@ -152,7 +152,7 @@ package:: default
 	mkdir -p $(PACKAGE_DIR)/data/deskbar/menu/Applications
 	cp $(TARGET) $(PACKAGE_DIR)/apps
 	ln -s ../../../../apps/$(NAME) $(PACKAGE_DIR)/data/deskbar/menu/Applications/$(NAME)
-	cat ./PackageInfo | sed 's/$$VERSION/$(APP_VERSION)/' | sed 's/$$ARCH/$(ARCH)/' > $(TARGET_DIR)/PackageInfo_$(ARCH)
+	sed -e 's/@VERSION@/$(APP_VERSION)/g' -e 's/@ARCH@/$(ARCH)/g' ./PackageInfo > $(TARGET_DIR)/PackageInfo_$(ARCH)
 	package create -C $(PACKAGE_DIR) -i $(TARGET_DIR)/PackageInfo_$(ARCH) $(PACKAGE_NAME)
 	copyattr -n BEOS:ICON $(TARGET) $(PACKAGE_NAME)
 
