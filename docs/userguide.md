@@ -1,7 +1,7 @@
 ![icon](icon.png)
 # StreamRadio user guide
 
-StreamRadio is an open-source native Haiku internet radio player created by Fishpond and currently maintained at HaikuArchives. It allows users to find, add, manage and listen to online radio stations.
+StreamRadio is an open-source native Haiku internet radio player created by Fishpond and now maintained by Sikosis. It allows users to find, add, manage and listen to online radio stations.
 
 ---
 
@@ -10,6 +10,7 @@ StreamRadio is an open-source native Haiku internet radio player created by Fish
 *	[First run](#part_first_run)
 *	[Adding stations](#part_add_station)
 *	[Start/Stop streaming a station](#part_start)
+*	[Sleep timer](#part_sleep_timer)
 *	[Managing stations](#part_manage)
 	*	[The station panel](#manage_panel)
 	*	[Adding a station using Shoutcast URL](#manage_add)
@@ -22,9 +23,9 @@ StreamRadio is an open-source native Haiku internet radio player created by Fish
 
 StreamRadio is available through HaikuDepot.
 
-StreamRadio can also be built from the source available at [HaikuArchives](https://github.com/HaikuArchives/StreamRadio). It depends on libxml2 (installable with *pkgman install devel:libxml2* from Terminal).
+StreamRadio can also be built from the source available in the [StreamRadio repository](https://github.com/sikosis/StreamRadio). It depends on libxml2 (installable with *pkgman install devel:libxml2* from Terminal).
 
-Bugs and enhancement issues can be filed at that same HaikuArchives page. Help with translations is welcome at [Polyglot](https://i18n.kacperkasper.pl/projects/29).
+Bugs and enhancement requests can be filed in the [StreamRadio issue tracker](https://github.com/sikosis/StreamRadio/issues). Help with translations is welcome at [Polyglot](https://i18n.kacperkasper.pl/projects/29).
 
 ## First run <a name = "part_first_run"></a>
 
@@ -64,6 +65,16 @@ To start streaming a station, simply double-click it. The little square on the s
 Double-click again, and the overlay symbol turns back to a square, indicating "Stop".
 
 You can listen to several streams simultaneously and adjust their individual volume with their volume slider. The option *App | Allow parallel playback* has to be checkmarked for that.
+
+## Sleep timer <a name = "part_sleep_timer"></a>
+
+Choose *App | Sleep timer…* to schedule an action without interrupting the
+current station. The timer can stop all playback, mute all playing stations, or
+quit StreamRadio. It can run at the top of the next hour or after 5, 10, 15, 30,
+or 45 minutes.
+
+Setting another sleep timer replaces the current one. Choose
+*App | Cancel sleep timer* to cancel it before it runs.
 
 ## Managing stations <a name = "part_manage"></a>
 

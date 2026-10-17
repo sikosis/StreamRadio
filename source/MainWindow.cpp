@@ -32,9 +32,13 @@
 #include <LayoutBuilder.h>
 #include <MenuBar.h>
 #include <MenuItem.h>
+#include <MessageRunner.h>
 #include <ScrollView.h>
+#include <String.h>
 #include <Url.h>
 #include <View.h>
+
+#include <time.h>
 
 #include "RadioApp.h"
 
@@ -44,9 +48,10 @@
 
 
 MainWindow::MainWindow()
-	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio"), B_DOCUMENT_WINDOW,
-		0),
-	  fStationFinder(NULL)
+	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio"), B_DOCUMENT_WINDOW, 0),
+	  fStationFinder(NULL),
+	  fSleepTimerRunner(NULL),
+	  fSleepTimerWindow(NULL)
 {
 	fSettings = &((RadioApp*)be_app)->Settings;
 
@@ -54,11 +59,18 @@ MainWindow::MainWindow()
 	fMenuParallelPlayback = new BMenuItem(
 		B_TRANSLATE("Allow parallel playback"), new BMessage(MSG_PARALLEL_PLAYBACK));
 	fMenuParallelPlayback->SetMarked(fAllowParallelPlayback);
+	fMenuCancelSleepTimer
+		= new BMenuItem(B_TRANSLATE("Cancel sleep timer"), new BMessage(MSG_SLEEP_TIMER_CANCEL));
+	fMenuCancelSleepTimer->SetEnabled(false);
 
 	fMainMenu = new BMenuBar(Bounds(), "MainMenu");
 	BLayoutBuilder::Menu<>(fMainMenu)
 		.AddMenu(B_TRANSLATE("App"))
 		.AddItem(fMenuParallelPlayback)
+		.AddSeparator()
+		.AddItem(B_TRANSLATE("Sleep timer" B_UTF8_ELLIPSIS), MSG_SLEEP_TIMER_OPEN)
+		.AddItem(fMenuCancelSleepTimer)
+		.AddSeparator()
 		.AddItem(B_TRANSLATE("Help" B_UTF8_ELLIPSIS), MSG_HELP)
 		.AddItem(B_TRANSLATE("About"), B_ABOUT_REQUESTED)
 		.AddSeparator()
@@ -109,6 +121,8 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+	delete fSleepTimerRunner;
+
 	for (int32 i = 0; i < fStationList->CountItems(); i++) {
 		StationListViewItem* stationItem = fStationList->ItemAt(i);
 		StreamPlayer* player = stationItem->Player();
@@ -278,6 +292,7 @@ MainWindow::MessageReceived(BMessage* message)
 					stationItem->StateChanged(player->State());
 
 					if (player->State() == StreamPlayer::Stopped) {
+						fActiveStations.RemoveItem(stationItem);
 						delete player;
 						stationItem->SetPlayer(NULL);
 					}
@@ -340,6 +355,33 @@ MainWindow::MessageReceived(BMessage* message)
 				while (fActiveStations.CountItems() > 1)
 					_TogglePlay(fActiveStations.LastItem());
 			}
+			break;
+
+		case MSG_SLEEP_TIMER_OPEN:
+			if (fSleepTimerWindow == NULL) {
+				fSleepTimerWindow = new SleepTimerWindow(this);
+				fSleepTimerWindow->Show();
+			} else if (fSleepTimerWindow->Lock()) {
+				fSleepTimerWindow->Activate(true);
+				fSleepTimerWindow->Unlock();
+			}
+			break;
+
+		case MSG_SLEEP_TIMER_SET:
+			_SetSleepTimer((SleepTimerAction)message->GetInt32("action", SLEEP_TIMER_STOP),
+				message->GetInt32("minutes", 30));
+			break;
+
+		case MSG_SLEEP_TIMER_CANCEL:
+			_CancelSleepTimer();
+			break;
+
+		case MSG_SLEEP_TIMER_FIRED:
+			_RunSleepTimer((SleepTimerAction)message->GetInt32("action", SLEEP_TIMER_STOP));
+			break;
+
+		case MSG_SLEEP_TIMER_WINDOW_CLOSED:
+			fSleepTimerWindow = NULL;
 			break;
 
 		case B_ABOUT_REQUESTED:
@@ -451,4 +493,129 @@ MainWindow::_TogglePlay(StationListViewItem* stationItem)
 		default:
 			break;
 	}
+}
+
+
+void
+MainWindow::_SetSleepTimer(SleepTimerAction action, int32 minutes)
+{
+	delete fSleepTimerRunner;
+	fSleepTimerRunner = NULL;
+
+	bigtime_t delay;
+	if (minutes > 0) {
+		delay = (bigtime_t)minutes * 60 * 1000000;
+	} else {
+		time_t now = time(NULL);
+		struct tm localTime;
+		localtime_r(&now, &localTime);
+		int32 seconds = (59 - localTime.tm_min) * 60 + (60 - localTime.tm_sec);
+		if (seconds < 1)
+			seconds = 1;
+		delay = (bigtime_t)seconds * 1000000;
+	}
+
+	BMessage timerMessage(MSG_SLEEP_TIMER_FIRED);
+	timerMessage.AddInt32("action", action);
+	fSleepTimerRunner = new BMessageRunner(BMessenger(this), &timerMessage, delay, 1);
+	if (fSleepTimerRunner->InitCheck() != B_OK) {
+		delete fSleepTimerRunner;
+		fSleepTimerRunner = NULL;
+		fMenuCancelSleepTimer->SetEnabled(false);
+		fStatusBar->SetText(B_TRANSLATE("Could not start the sleep timer."));
+		return;
+	}
+
+	fMenuCancelSleepTimer->SetEnabled(true);
+	const char* actionText;
+	switch (action) {
+		case SLEEP_TIMER_MUTE:
+			actionText = B_TRANSLATE("mute playback");
+			break;
+		case SLEEP_TIMER_QUIT:
+			actionText = B_TRANSLATE("quit StreamRadio");
+			break;
+		case SLEEP_TIMER_STOP:
+		default:
+			actionText = B_TRANSLATE("stop playback");
+			break;
+	}
+
+	BString status;
+	if (minutes > 0) {
+		status.SetToFormat(
+			B_TRANSLATE("Sleep timer will %s in %" B_PRId32 " minutes."), actionText, minutes);
+	} else {
+		status.SetToFormat(B_TRANSLATE("Sleep timer will %s at the top of the hour."), actionText);
+	}
+	fStatusBar->SetText(status.String());
+}
+
+
+void
+MainWindow::_CancelSleepTimer()
+{
+	if (fSleepTimerRunner == NULL)
+		return;
+
+	delete fSleepTimerRunner;
+	fSleepTimerRunner = NULL;
+	fMenuCancelSleepTimer->SetEnabled(false);
+	fStatusBar->SetText(B_TRANSLATE("Sleep timer cancelled."));
+}
+
+
+void
+MainWindow::_RunSleepTimer(SleepTimerAction action)
+{
+	delete fSleepTimerRunner;
+	fSleepTimerRunner = NULL;
+	fMenuCancelSleepTimer->SetEnabled(false);
+
+	switch (action) {
+		case SLEEP_TIMER_MUTE:
+			_MuteAllStreams();
+			fStatusBar->SetText(B_TRANSLATE("Sleep timer muted playback."));
+			break;
+
+		case SLEEP_TIMER_QUIT:
+			PostMessage(B_QUIT_REQUESTED);
+			break;
+
+		case SLEEP_TIMER_STOP:
+		default:
+			_StopAllStreams();
+			fStatusBar->SetText(B_TRANSLATE("Sleep timer stopped playback."));
+			break;
+	}
+}
+
+
+void
+MainWindow::_StopAllStreams()
+{
+	while (!fActiveStations.IsEmpty()) {
+		StationListViewItem* stationItem = fActiveStations.LastItem();
+		StreamPlayer* player = stationItem->Player();
+		if (player != NULL)
+			player->Stop();
+		stationItem->StateChanged(StreamPlayer::Stopped);
+		fActiveStations.RemoveItem(stationItem);
+	}
+}
+
+
+void
+MainWindow::_MuteAllStreams()
+{
+	for (int32 i = 0; i < fActiveStations.CountItems(); i++) {
+		StreamPlayer* player = fActiveStations.ItemAt(i)->Player();
+		if (player != NULL)
+			player->SetVolume(0.0f);
+	}
+
+	int32 selectedIndex = fStationList->CurrentSelection();
+	StationListViewItem* selected = fStationList->ItemAt(selectedIndex);
+	if (selected != NULL && selected->Player() != NULL)
+		fStationPanel->StateChanged(selected->Player()->State());
 }

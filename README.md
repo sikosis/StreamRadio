@@ -6,7 +6,8 @@ radio stations.
 Search the [Community Radio Browser](https://www.radio-browser.info/) directory,
 add stations to your collection, inspect and edit station details, and control
 the volume of each stream. StreamRadio also supports direct Shoutcast URLs and
-optional parallel playback of multiple stations.
+optional parallel playback of multiple stations. A sleep timer can stop or mute
+playback, or quit StreamRadio, at the top of the hour or after a preset delay.
 
 ![StreamRadio station list and station information](docs/screenshots/StreamRadio.png)
 

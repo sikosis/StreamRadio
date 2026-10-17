@@ -42,6 +42,7 @@ SRCS = \
 	 MainWindow.cpp  \
 	 RadioApp.cpp  \
 	 RadioSettings.cpp  \
+	 SleepTimerWindow.cpp  \
 	 Station.cpp  \
 	 StationFinder.cpp  \
 	 StationFinderRadioNetwork.cpp  \

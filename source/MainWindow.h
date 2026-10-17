@@ -29,6 +29,7 @@
 #include <Window.h>
 
 #include "RadioSettings.h"
+#include "SleepTimerWindow.h"
 #include "StationFinder.h"
 #include "StationListView.h"
 #include "StationPanel.h"
@@ -45,6 +46,9 @@
 #define MSG_PARALLEL_PLAYBACK 'mPAR'
 
 
+class BMessageRunner;
+
+
 class MainWindow : public BWindow {
 public:
 	MainWindow();
@@ -58,6 +62,11 @@ public:
 private:
 	void _Invoke(StationListViewItem* stationItem);
 	void _TogglePlay(StationListViewItem* stationItem);
+	void _SetSleepTimer(SleepTimerAction action, int32 minutes);
+	void _CancelSleepTimer();
+	void _RunSleepTimer(SleepTimerAction action);
+	void _StopAllStreams();
+	void _MuteAllStreams();
 
 private:
 	RadioSettings* fSettings;
@@ -69,6 +78,9 @@ private:
 	BObjectList<StationListViewItem> fActiveStations;
 	bool fAllowParallelPlayback;
 	BMenuItem* fMenuParallelPlayback;
+	BMenuItem* fMenuCancelSleepTimer;
+	BMessageRunner* fSleepTimerRunner;
+	SleepTimerWindow* fSleepTimerWindow;
 };
 
 
