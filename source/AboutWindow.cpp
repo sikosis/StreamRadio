@@ -14,9 +14,12 @@
 #include <Catalog.h>
 #include <File.h>
 #include <Font.h>
+#include <IconUtils.h>
 #include <InterfaceDefs.h>
 #include <LayoutBuilder.h>
 #include <Message.h>
+#include <Mime.h>
+#include <Resources.h>
 #include <Roster.h>
 #include <SeparatorView.h>
 #include <String.h>
@@ -57,6 +60,25 @@ private:
 static BBitmap*
 LoadAppIcon()
 {
+	const int32 iconSize = 96;
+	BBitmap* icon
+		= new BBitmap(BRect(0, 0, iconSize - 1, iconSize - 1), B_RGBA32);
+	if (icon->InitCheck() == B_OK) {
+		BResources* resources = BApplication::AppResources();
+		if (resources != NULL) {
+			size_t size = 0;
+			const uint8* data = static_cast<const uint8*>(
+				resources->LoadResource(B_VECTOR_ICON_TYPE, "BEOS:ICON", &size));
+			if (data != NULL && size > 0
+				&& BIconUtils::GetVectorIcon(data, size, icon) == B_OK) {
+				return icon;
+			}
+		}
+	}
+	delete icon;
+
+	// Fall back to the legacy 32 px application icon if no vector resource is
+	// available (for example, when running an older, unpackaged binary).
 	app_info appInfo;
 	if (be_app->GetAppInfo(&appInfo) != B_OK)
 		return NULL;
@@ -65,7 +87,7 @@ LoadAppIcon()
 	if (appFile.InitCheck() != B_OK)
 		return NULL;
 
-	BBitmap* icon = new BBitmap(BRect(0, 0, 31, 31), B_RGBA32);
+	icon = new BBitmap(BRect(0, 0, 31, 31), B_RGBA32);
 	if (icon->InitCheck() != B_OK) {
 		delete icon;
 		return NULL;
