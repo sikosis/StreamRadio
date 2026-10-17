@@ -34,6 +34,7 @@
 
 static const int32 kBufferFlushInterval = 512;
 static const bigtime_t kPlaybackStallTimeout = 15000000;
+static const bigtime_t kNetworkStallTimeout = 30000000;
 static const bigtime_t kWatchdogInterval = 1000000;
 
 
@@ -53,6 +54,7 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 	  fDecodeFailures(0),
 	  fProgressLock("StreamPlayer progress"),
 	  fLastPlaybackProgress(system_time()),
+	  fLastNetworkProgress(system_time()),
 	  fCodecInfo(),
 	  fDecodedFormat(),
 	  fHeader(),
@@ -63,7 +65,8 @@ StreamPlayer::StreamPlayer(Station* station, BLooper* notify)
 {
 	TRACE("Trying to set player for stream %s\n", station->StreamUrl().UrlString().String());
 
-	fStream = new (std::nothrow) StreamIO(station, notify);
+	fStream = new (std::nothrow)
+		StreamIO(station, notify, &StreamPlayer::_NetworkProgressFunc, this);
 	if (fStream == NULL) {
 		fInitStatus = B_NO_MEMORY;
 		return;
@@ -232,6 +235,16 @@ StreamPlayer::_MarkPlaybackProgress()
 }
 
 
+void
+StreamPlayer::_MarkNetworkProgress()
+{
+	if (fProgressLock.Lock()) {
+		fLastNetworkProgress = system_time();
+		fProgressLock.Unlock();
+	}
+}
+
+
 bigtime_t
 StreamPlayer::_LastPlaybackProgress()
 {
@@ -241,6 +254,27 @@ StreamPlayer::_LastPlaybackProgress()
 		fProgressLock.Unlock();
 	}
 	return progress;
+}
+
+
+bigtime_t
+StreamPlayer::_LastNetworkProgress()
+{
+	bigtime_t progress = 0;
+	if (fProgressLock.Lock()) {
+		progress = fLastNetworkProgress;
+		fProgressLock.Unlock();
+	}
+	return progress;
+}
+
+
+void
+StreamPlayer::_NetworkProgressFunc(void* cookie)
+{
+	StreamPlayer* player = static_cast<StreamPlayer*>(cookie);
+	if (player != NULL)
+		player->_MarkNetworkProgress();
 }
 
 
@@ -313,9 +347,9 @@ StreamPlayer::_GetDecodedChunk(
 status_t
 StreamPlayer::_WatchdogThreadFunc(StreamPlayer* _this)
 {
-	MSG("Playback watchdog armed for %s (%.0f second timeout)\n",
+	MSG("Playback watchdog armed for %s (decoder %.0fs, network %.0fs)\n",
 		_this->fStation->StreamUrl().UrlString().String(),
-		kPlaybackStallTimeout / 1000000.0);
+		kPlaybackStallTimeout / 1000000.0, kNetworkStallTimeout / 1000000.0);
 
 	while (atomic_get(&_this->fStopRequested) == 0) {
 		snooze(kWatchdogInterval);
@@ -324,11 +358,14 @@ StreamPlayer::_WatchdogThreadFunc(StreamPlayer* _this)
 		if (_this->State() != StreamPlayer::Playing)
 			continue;
 
-		bigtime_t stalledFor = system_time() - _this->_LastPlaybackProgress();
-		if (stalledFor >= kPlaybackStallTimeout) {
-			MSG("Playback stalled for %.1f seconds on %s; reconnecting...\n",
-				stalledFor / 1000000.0,
-				_this->fStation->StreamUrl().UrlString().String());
+		bigtime_t now = system_time();
+		bigtime_t playbackIdleFor = now - _this->_LastPlaybackProgress();
+		bigtime_t networkIdleFor = now - _this->_LastNetworkProgress();
+		if (playbackIdleFor >= kPlaybackStallTimeout
+			|| networkIdleFor >= kNetworkStallTimeout) {
+			MSG("Stream stalled on %s (decoder %.1fs, network %.1fs); reconnecting...\n",
+				_this->fStation->StreamUrl().UrlString().String(),
+				playbackIdleFor / 1000000.0, networkIdleFor / 1000000.0);
 			_this->_ScheduleReconnect(B_TIMED_OUT);
 		}
 	}
@@ -409,7 +446,9 @@ StreamPlayer::_ReconnectThreadFunc(StreamPlayer* _this)
 		return B_CANCELED;
 	}
 
-	_this->fStream = new (std::nothrow) StreamIO(_this->fStation, _this->fNotify);
+	_this->_MarkNetworkProgress();
+	_this->fStream = new (std::nothrow) StreamIO(_this->fStation, _this->fNotify,
+		&StreamPlayer::_NetworkProgressFunc, _this);
 	if (_this->fStream == NULL)
 		_this->fInitStatus = B_NO_MEMORY;
 	else

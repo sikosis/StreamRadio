@@ -44,7 +44,8 @@ const char kMpegHeader2 = '\xe0';
 #define B_TRANSLATION_CONTEXT "StreamIO"
 
 
-StreamIO::StreamIO(Station* station, BLooper* metaListener)
+StreamIO::StreamIO(Station* station, BLooper* metaListener,
+	StreamProgressFunc progressFunc, void* progressCookie)
 	: BAdapterIO(B_MEDIA_STREAMING | B_MEDIA_SEEKABLE, HTTP_TIMEOUT),
 	  fStation(station),
 	  fReq(NULL),
@@ -57,6 +58,8 @@ StreamIO::StreamIO(Station* station, BLooper* metaListener)
 	  fUntilMetaStart(0),
 	  fUntilMetaEnd(0),
 	  fMetaListener(metaListener),
+	  fProgressFunc(progressFunc),
+	  fProgressCookie(progressCookie),
 	  fFrameSync(none),
 	  fLimit(0),
 	  fBuffered(0),
@@ -377,6 +380,9 @@ StreamIO::_DataUnsyncedReceived(const char* data, size_t size, int next)
 ssize_t
 StreamIO::Write(const void* buffer, size_t size)
 {
+	if (size > 0 && fProgressFunc != NULL)
+		fProgressFunc(fProgressCookie);
+
 	DataFunc f = fDataFuncs.First();
 	if (f)
 		return (*this.*f)((const char*)buffer, size, 1);

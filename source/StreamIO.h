@@ -38,6 +38,7 @@ class StreamIO;
 
 
 typedef ssize_t (StreamIO::*DataFunc)(const char* data, size_t size, int next);
+typedef void (*StreamProgressFunc)(void* cookie);
 
 
 class DataFuncs {
@@ -83,7 +84,8 @@ private:
 
 class StreamIO : public BAdapterIO, BUrlProtocolListener {
 public:
-	StreamIO(Station* station, BLooper* metaListener = NULL);
+	StreamIO(Station* station, BLooper* metaListener = NULL,
+		StreamProgressFunc progressFunc = NULL, void* progressCookie = NULL);
 	~StreamIO();
 
 	void SetLimiter(size_t limit = 0);
@@ -134,6 +136,8 @@ private:
 	size_t fUntilMetaStart;
 	size_t fUntilMetaEnd;
 	BLooper* fMetaListener;
+	StreamProgressFunc fProgressFunc;
+	void* fProgressCookie;
 	FrameSync fFrameSync;
 	size_t fLimit;
 	size_t fBuffered;

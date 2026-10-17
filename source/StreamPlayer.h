@@ -62,8 +62,11 @@ public:
 private:
 	void _SetState(PlayState state);
 	void _MarkPlaybackProgress();
+	void _MarkNetworkProgress();
 	bigtime_t _LastPlaybackProgress();
+	bigtime_t _LastNetworkProgress();
 
+	static void _NetworkProgressFunc(void* cookie);
 	static status_t _StartPlayThreadFunc(StreamPlayer* _this);
 	static status_t _ReconnectThreadFunc(StreamPlayer* _this);
 	static status_t _WatchdogThreadFunc(StreamPlayer* _this);
@@ -87,6 +90,7 @@ private:
 	int32 fDecodeFailures;
 	BLocker fProgressLock;
 	bigtime_t fLastPlaybackProgress;
+	bigtime_t fLastNetworkProgress;
 
 	media_codec_info fCodecInfo;
 	media_format fDecodedFormat;
