@@ -63,7 +63,7 @@ LoadAppIcon()
 {
 	// The primary HVIF is deliberately compact for Tracker and Deskbar, but the
 	// About window has enough room to show the full-resolution artwork.
-	BBitmap* icon = BTranslationUtils::GetBitmap(B_PNG_FORMAT, "about-icon.png");
+	BBitmap* icon = BTranslationUtils::GetBitmap('PNG ', "about-icon.png");
 	if (icon != NULL)
 		return icon;
 
@@ -112,7 +112,7 @@ LoadAppIcon()
 static BString
 AppVersion()
 {
-	BString version(B_TRANSLATE("Version 1.2.2"));
+	BString version(B_TRANSLATE("Version 1.2.3"));
 	app_info appInfo;
 	if (be_app->GetAppInfo(&appInfo) != B_OK)
 		return version;
