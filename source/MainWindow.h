@@ -44,9 +44,21 @@
 #define MSG_INVOKE_STATION 'mIST'
 #define MSG_HELP 'HELP'
 #define MSG_PARALLEL_PLAYBACK 'mPAR'
+#define MSG_VIEW_MINI_PLAYER 'vMIN'
+#define MSG_VIEW_HEIGHT_MAX 'vMAX'
+#define MSG_VIEW_FULLSCREEN 'vFUL'
 
 
 class BMessageRunner;
+class BSplitView;
+
+
+enum WindowViewMode {
+	VIEW_MODE_NORMAL,
+	VIEW_MODE_MINI_PLAYER,
+	VIEW_MODE_HEIGHT_MAX,
+	VIEW_MODE_FULLSCREEN
+};
 
 
 class MainWindow : public BWindow {
@@ -67,10 +79,13 @@ private:
 	void _RunSleepTimer(SleepTimerAction action);
 	void _StopAllStreams();
 	void _MuteAllStreams();
+	void _SetViewMode(WindowViewMode mode);
+	void _UpdateViewMenuItems();
 
 private:
 	RadioSettings* fSettings;
 	BMenuBar* fMainMenu;
+	BSplitView* fContentSplit;
 	StationListView* fStationList;
 	StationFinderWindow* fStationFinder;
 	StationPanel* fStationPanel;
@@ -79,6 +94,14 @@ private:
 	bool fAllowParallelPlayback;
 	BMenuItem* fMenuParallelPlayback;
 	BMenuItem* fMenuCancelSleepTimer;
+	BMenuItem* fMenuMiniPlayer;
+	BMenuItem* fMenuHeightMax;
+	BMenuItem* fMenuFullscreen;
+	WindowViewMode fViewMode;
+	BRect fNormalFrame;
+	window_look fNormalLook;
+	bool fNormalStationListCollapsed;
+	bool fNormalStationPanelCollapsed;
 	BMessageRunner* fSleepTimerRunner;
 	SleepTimerWindow* fSleepTimerWindow;
 };

@@ -33,7 +33,9 @@
 #include <MenuBar.h>
 #include <MenuItem.h>
 #include <MessageRunner.h>
+#include <Screen.h>
 #include <ScrollView.h>
+#include <SplitView.h>
 #include <String.h>
 #include <Url.h>
 #include <View.h>
@@ -49,7 +51,12 @@
 
 MainWindow::MainWindow()
 	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio"), B_DOCUMENT_WINDOW, 0),
+	  fContentSplit(NULL),
 	  fStationFinder(NULL),
+	  fViewMode(VIEW_MODE_NORMAL),
+	  fNormalLook(B_DOCUMENT_WINDOW_LOOK),
+	  fNormalStationListCollapsed(false),
+	  fNormalStationPanelCollapsed(false),
 	  fSleepTimerRunner(NULL),
 	  fSleepTimerWindow(NULL)
 {
@@ -62,6 +69,12 @@ MainWindow::MainWindow()
 	fMenuCancelSleepTimer
 		= new BMenuItem(B_TRANSLATE("Cancel sleep timer"), new BMessage(MSG_SLEEP_TIMER_CANCEL));
 	fMenuCancelSleepTimer->SetEnabled(false);
+	fMenuMiniPlayer
+		= new BMenuItem(B_TRANSLATE("Mini Player"), new BMessage(MSG_VIEW_MINI_PLAYER));
+	fMenuHeightMax
+		= new BMenuItem(B_TRANSLATE("Height Max"), new BMessage(MSG_VIEW_HEIGHT_MAX));
+	fMenuFullscreen
+		= new BMenuItem(B_TRANSLATE("Fullscreen"), new BMessage(MSG_VIEW_FULLSCREEN));
 
 	fMainMenu = new BMenuBar(Bounds(), "MainMenu");
 	BLayoutBuilder::Menu<>(fMainMenu)
@@ -84,12 +97,18 @@ MainWindow::MainWindow()
 		.AddMenu(B_TRANSLATE("Search"))
 		.AddItem(B_TRANSLATE("Find stations" B_UTF8_ELLIPSIS), MSG_SEARCH, 'S')
 		.End()
+		.AddMenu(B_TRANSLATE("View"))
+		.AddItem(fMenuMiniPlayer)
+		.AddItem(fMenuHeightMax)
+		.AddItem(fMenuFullscreen)
+		.End()
 		.End();
 
 	fStationList = new StationListView(true);
 	BScrollView* stationScroll = new BScrollView("scrollStation", fStationList, 0, false, true);
 
 	fStationPanel = new StationPanel(this);
+	fContentSplit = new BSplitView(B_VERTICAL, 2);
 
 	fStatusBar = new BStringView("status", B_EMPTY_STRING);
 
@@ -97,9 +116,10 @@ MainWindow::MainWindow()
 		.Add(fMainMenu)
 		.AddGroup(B_VERTICAL)
 		.SetInsets(B_USE_WINDOW_INSETS, 0, B_USE_WINDOW_INSETS, B_USE_WINDOW_INSETS)
-		.AddSplit(B_VERTICAL, 2)
+		.AddSplit(fContentSplit, 1.0f)
 		.Add(stationScroll, 1.0f)
 		.Add(fStationPanel)
+		.SetCollapsible(0, true)
 		.SetCollapsible(1, true)
 		.End()
 		.Add(fStatusBar)
@@ -116,6 +136,7 @@ MainWindow::MainWindow()
 
 	ResizeToPreferred();
 	CenterOnScreen();
+	fNormalFrame = Frame();
 }
 
 
@@ -382,6 +403,18 @@ MainWindow::MessageReceived(BMessage* message)
 			fSleepTimerWindow = NULL;
 			break;
 
+		case MSG_VIEW_MINI_PLAYER:
+			_SetViewMode(VIEW_MODE_MINI_PLAYER);
+			break;
+
+		case MSG_VIEW_HEIGHT_MAX:
+			_SetViewMode(VIEW_MODE_HEIGHT_MAX);
+			break;
+
+		case MSG_VIEW_FULLSCREEN:
+			_SetViewMode(VIEW_MODE_FULLSCREEN);
+			break;
+
 		case B_ABOUT_REQUESTED:
 			be_app->AboutRequested();
 			break;
@@ -616,4 +649,83 @@ MainWindow::_MuteAllStreams()
 	StationListViewItem* selected = fStationList->ItemAt(selectedIndex);
 	if (selected != NULL && selected->Player() != NULL)
 		fStationPanel->StateChanged(selected->Player()->State());
+}
+
+
+void
+MainWindow::_SetViewMode(WindowViewMode mode)
+{
+	if (mode == fViewMode)
+		mode = VIEW_MODE_NORMAL;
+
+	BRect screenFrame;
+	if (mode == VIEW_MODE_HEIGHT_MAX || mode == VIEW_MODE_FULLSCREEN) {
+		BScreen screen(this);
+		if (!screen.IsValid())
+			return;
+		screenFrame = screen.Frame();
+	}
+
+	if (fViewMode == VIEW_MODE_NORMAL) {
+		fNormalFrame = Frame();
+		fNormalLook = Look();
+		fNormalStationListCollapsed = fContentSplit->IsItemCollapsed(0);
+		fNormalStationPanelCollapsed = fContentSplit->IsItemCollapsed(1);
+	} else {
+		if (fViewMode == VIEW_MODE_FULLSCREEN)
+			SetLook(fNormalLook);
+
+		fContentSplit->SetItemCollapsed(0, fNormalStationListCollapsed);
+		fContentSplit->SetItemCollapsed(1, fNormalStationPanelCollapsed);
+		MoveTo(fNormalFrame.LeftTop());
+		ResizeTo(fNormalFrame.Width(), fNormalFrame.Height());
+	}
+
+	fViewMode = VIEW_MODE_NORMAL;
+	if (mode == VIEW_MODE_NORMAL) {
+		_UpdateViewMenuItems();
+		return;
+	}
+
+	switch (mode) {
+		case VIEW_MODE_MINI_PLAYER:
+			fContentSplit->SetItemCollapsed(0, true);
+			fContentSplit->SetItemCollapsed(1, false);
+			ResizeToPreferred();
+			MoveOnScreen(B_MOVE_IF_PARTIALLY_OFFSCREEN);
+			break;
+
+		case VIEW_MODE_HEIGHT_MAX:
+		{
+			BRect windowFrame = Frame();
+			BRect decoratorFrame = DecoratorFrame();
+			float topInset = windowFrame.top - decoratorFrame.top;
+			float bottomInset = decoratorFrame.bottom - windowFrame.bottom;
+			MoveTo(fNormalFrame.left, screenFrame.top + topInset);
+			ResizeTo(fNormalFrame.Width(), screenFrame.Height() - topInset - bottomInset);
+			break;
+		}
+
+		case VIEW_MODE_FULLSCREEN:
+			SetLook(B_NO_BORDER_WINDOW_LOOK);
+			MoveTo(screenFrame.LeftTop());
+			ResizeTo(screenFrame.Width(), screenFrame.Height());
+			break;
+
+		case VIEW_MODE_NORMAL:
+		default:
+			break;
+	}
+
+	fViewMode = mode;
+	_UpdateViewMenuItems();
+}
+
+
+void
+MainWindow::_UpdateViewMenuItems()
+{
+	fMenuMiniPlayer->SetMarked(fViewMode == VIEW_MODE_MINI_PLAYER);
+	fMenuHeightMax->SetMarked(fViewMode == VIEW_MODE_HEIGHT_MAX);
+	fMenuFullscreen->SetMarked(fViewMode == VIEW_MODE_FULLSCREEN);
 }

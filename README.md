@@ -1,4 +1,4 @@
-# ![StreamRadio icon](docs/icon.png) StreamRadio [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-1.1.1-orange)
+# ![StreamRadio icon](docs/icon.png) StreamRadio [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-1.2.0-orange)
 
 StreamRadio is a native Haiku application for finding and listening to internet
 radio stations.
@@ -8,6 +8,7 @@ add stations to your collection, inspect and edit station details, and control
 the volume of each stream. StreamRadio also supports direct Shoutcast URLs and
 optional parallel playback of multiple stations. A sleep timer can stop or mute
 playback, or quit StreamRadio, at the top of the hour or after a preset delay.
+The main window also offers mini-player, maximum-height, and fullscreen modes.
 
 ![StreamRadio station list and station information](docs/screenshots/StreamRadio.png)
 
@@ -72,13 +73,13 @@ make package
 The package is written to:
 
 ```text
-dist/StreamRadio-1.1.1-<architecture>.hpkg
+dist/StreamRadio-1.2.0-<architecture>.hpkg
 ```
 
 Install it with `pkgman`, substituting the generated filename:
 
 ```sh
-pkgman install ./dist/StreamRadio-1.1.1-x86_64.hpkg
+pkgman install ./dist/StreamRadio-1.2.0-x86_64.hpkg
 ```
 
 > [!WARNING]

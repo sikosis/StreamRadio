@@ -10,6 +10,7 @@ StreamRadio is an open-source native Haiku internet radio player created by Fish
 *	[First run](#part_first_run)
 *	[Adding stations](#part_add_station)
 *	[Start/Stop streaming a station](#part_start)
+*	[View modes](#part_view_modes)
 *	[Sleep timer](#part_sleep_timer)
 *	[Managing stations](#part_manage)
 	*	[The station panel](#manage_panel)
@@ -65,6 +66,16 @@ To start streaming a station, simply double-click it. The little square on the s
 Double-click again, and the overlay symbol turns back to a square, indicating "Stop".
 
 You can listen to several streams simultaneously and adjust their individual volume with their volume slider. The option *App | Allow parallel playback* has to be checkmarked for that.
+
+## View modes <a name = "part_view_modes"></a>
+
+The *View* menu provides three alternate window modes. *Mini Player* hides the
+station list while keeping the selected station details and volume control.
+*Height Max* expands the window to the full screen height without changing its
+width. *Fullscreen* removes the window border and fills the current screen.
+
+The modes are mutually exclusive. Choose the active mode again to return to the
+previous normal window size and layout.
 
 ## Sleep timer <a name = "part_sleep_timer"></a>
 
