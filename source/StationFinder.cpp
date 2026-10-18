@@ -40,6 +40,15 @@ FindByCapability::~FindByCapability()
 	fKeywords.MakeEmpty();
 }
 
+
+void
+FindByCapability::SetKeyWords(const BStringList& keyWords)
+{
+	fKeywords.MakeEmpty();
+	fKeywords.Add(keyWords);
+}
+
+
 StationFinderService::StationFinderService()
 	: serviceName("unknown"),
 	  serviceHomePage("", true),
@@ -60,6 +69,15 @@ void
 StationFinderService::Register(BString* name, InstantiateFunc instantiate)
 {
 	stationFinderServices.Register(name, instantiate);
+}
+
+
+void
+StationFinderService::SetCapabilityKeyWords(int index, const BStringList& keyWords)
+{
+	FindByCapability* capability = Capability(index);
+	if (capability != NULL)
+		capability->SetKeyWords(keyWords);
 }
 
 
@@ -127,7 +145,7 @@ StationFinderWindow::StationFinderWindow(BWindow* parent)
 	const char* settingsServiceName = ((RadioApp*)be_app)->Settings.StationFinderName();
 	for (int32 i = 0; i < stationFinderServices.CountItems(); i++) {
 		BString* serviceName = stationFinderServices.Name(i);
-		if (settingsServiceName && serviceName->Compare(settingsServiceName))
+		if (settingsServiceName != NULL && serviceName->Compare(settingsServiceName) == 0)
 			currentServiceIndex = i;
 		fDdServices->AddOption(serviceName->String(), i);
 	}
@@ -267,6 +285,26 @@ StationFinderWindow::MessageReceived(BMessage* msg)
 			break;
 		}
 
+		case MSG_UPDATE_CAPABILITY:
+		{
+			StationFinderService* service = NULL;
+			if (msg->FindPointer("service", (void**)&service) != B_OK
+				|| service != fCurrentService) {
+				break;
+			}
+
+			int32 capabilityIndex = msg->GetInt32("capability", -1);
+			BStringList keyWords(true);
+			const char* keyWord;
+			for (int32 i = 0; msg->FindString("keyword", i, &keyWord) == B_OK; i++)
+				keyWords.Add(keyWord);
+
+			fCurrentService->SetCapabilityKeyWords(capabilityIndex, keyWords);
+			if (fDdSearchBy->Value() == capabilityIndex)
+				SelectCapability(capabilityIndex);
+			break;
+		}
+
 		case MSG_SELECT_STATION:
 		{
 			bool inResults = (msg->GetInt32("index", -1) >= 0);
@@ -334,6 +372,8 @@ StationFinderWindow::SelectService(int index)
 
 	if (fDdSearchBy->CountOptions() != 0)
 		SelectCapability(0);
+
+	fCurrentService->LoadCapabilities(this);
 }
 
 

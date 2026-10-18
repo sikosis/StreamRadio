@@ -41,11 +41,13 @@ public:
 
 	virtual StationList* FindBy(
 		int capabilityIndex, const char* searchFor, BLooper* resultUpdateTarget);
+	virtual void LoadCapabilities(BLooper* resultUpdateTarget);
 
 private:
 	static const char* serviceNameInternal;
 
 	static BStringList* _GetKeywords(const char* path, int32 minStations);
+	static int32 _KeywordLoadFunc(void* data);
 	static int32 _IconLookupFunc(void* data);
 	void _WaitForIconLookupThread();
 

@@ -112,7 +112,7 @@ LoadAppIcon()
 static BString
 AppVersion()
 {
-	BString version(B_TRANSLATE("Version 1.2.3"));
+	BString version(B_TRANSLATE("Version 1.3.1"));
 	app_info appInfo;
 	if (be_app->GetAppInfo(&appInfo) != B_OK)
 		return version;

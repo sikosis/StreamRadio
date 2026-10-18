@@ -37,6 +37,25 @@ BString StationFinderRadioNetwork::sBaseUrl("https://de1.api.radio-browser.info/
 const char* StationFinderRadioNetwork::serviceNameInternal = "Community Radio Browser";
 
 
+struct KeywordLoadContext {
+	KeywordLoadContext(BLooper* updateTarget, StationFinderService* finderService,
+		int32 index, const char* requestPath, int32 minimumStations)
+		: target(updateTarget),
+		  service(finderService),
+		  capabilityIndex(index),
+		  path(requestPath),
+		  minStations(minimumStations)
+	{
+	}
+
+	BMessenger target;
+	StationFinderService* service;
+	int32 capabilityIndex;
+	const char* path;
+	int32 minStations;
+};
+
+
 IconLookup::IconLookup(Station* station, BUrl iconUrl)
 	: fStation(station),
 	  fIconUrl(iconUrl)
@@ -85,37 +104,12 @@ StationFinderRadioNetwork::StationFinderRadioNetwork()
 	serviceName.SetTo(B_TRANSLATE(serviceNameInternal));
 	serviceHomePage.SetUrlString("https://www.radio-browser.info", false);
 
-	BStringList* keywords;
-
 	// Register different search capabilities
 	searchCapabilityName = RegisterSearchCapability("Name");
-
-	// Tag Search (dropdown)
-	keywords = _GetKeywords("json/tags?limit=1000000&hidebroken=true", 20);
-	if (keywords != NULL) {
-		searchCapabilityTag = RegisterSearchCapability("Tag", keywords);
-		delete keywords;
-	}
-
-	// Language Search (dropdown)
-	keywords = _GetKeywords("json/languages?limit=1000000&hidebroken=true", 20);
-	if (keywords != NULL) {
-		searchCapabilityLanguage = RegisterSearchCapability("Language", keywords);
-		delete keywords;
-	}
-
-	keywords = _GetKeywords("json/countries?limit=1000000&hidebroken=true", 10);
-	if (keywords != NULL) {
-		searchCapabilityCountry = RegisterSearchCapability("Country", keywords);
-		delete keywords;
-	}
-
-	keywords = _GetKeywords("json/codecs?limit=1000000&hidebroken=true", 10);
-	if (keywords != NULL && !keywords->IsEmpty()) {
-		searchCapabilityCodec = RegisterSearchCapability("Codec", keywords);
-		delete keywords;
-	}
-
+	searchCapabilityTag = RegisterSearchCapability("Tag");
+	searchCapabilityLanguage = RegisterSearchCapability("Language");
+	searchCapabilityCountry = RegisterSearchCapability("Country");
+	searchCapabilityCodec = RegisterSearchCapability("Codec");
 	searchCapabilityUuid = RegisterSearchCapability("Unique identifier");
 }
 
@@ -139,6 +133,60 @@ StationFinderRadioNetwork::RegisterSelf()
 {
 	Register(
 		new BString(B_TRANSLATE(serviceNameInternal)), &StationFinderRadioNetwork::Instantiate);
+}
+
+
+void
+StationFinderRadioNetwork::LoadCapabilities(BLooper* resultUpdateTarget)
+{
+	if (resultUpdateTarget == NULL)
+		return;
+
+	struct CapabilityRequest {
+		int32 index;
+		const char* path;
+		int32 minStations;
+	};
+
+	const CapabilityRequest requests[] = {
+		{ searchCapabilityTag, "json/tags?limit=1000000&hidebroken=true", 20 },
+		{ searchCapabilityLanguage, "json/languages?limit=1000000&hidebroken=true", 20 },
+		{ searchCapabilityCountry, "json/countries?limit=1000000&hidebroken=true", 10 },
+		{ searchCapabilityCodec, "json/codecs?limit=1000000&hidebroken=true", 10 }
+	};
+	HttpUtils::UserAgent();
+
+	for (size_t i = 0; i < sizeof(requests) / sizeof(requests[0]); i++) {
+		KeywordLoadContext* context = new KeywordLoadContext(resultUpdateTarget, this,
+			requests[i].index, requests[i].path, requests[i].minStations);
+
+		thread_id thread = spawn_thread(
+			&_KeywordLoadFunc, "radio browser categories", B_LOW_PRIORITY, context);
+		if (thread >= B_OK)
+			resume_thread(thread);
+		else
+			delete context;
+	}
+}
+
+
+int32
+StationFinderRadioNetwork::_KeywordLoadFunc(void* data)
+{
+	KeywordLoadContext* context = (KeywordLoadContext*)data;
+	BStringList* keyWords = _GetKeywords(context->path, context->minStations);
+	if (keyWords != NULL) {
+		BMessage message(MSG_UPDATE_CAPABILITY);
+		message.AddPointer("service", context->service);
+		message.AddInt32("capability", context->capabilityIndex);
+		for (int32 i = 0; i < keyWords->CountStrings(); i++)
+			message.AddString("keyword", keyWords->StringAt(i));
+		context->target.SendMessage(&message);
+		delete keyWords;
+	}
+
+	delete context;
+	return B_OK;
 }
 
 

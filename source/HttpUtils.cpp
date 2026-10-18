@@ -251,7 +251,8 @@ private:
 BMessage*
 HttpUtils::GetMsgFromREST(BUrl* url, BHttpHeaders* responseHeaders, bigtime_t timeOut)
 {
-	BMallocIO* json = GetAll(url, responseHeaders, timeOut, &jsonType, 0);
+	BString contentType(jsonType);
+	BMallocIO* json = GetAll(url, responseHeaders, timeOut, &contentType, 0);
 	if (json == NULL)
 		return NULL;
 
@@ -283,7 +284,8 @@ BStringList*
 HttpUtils::GetStringsFromREST(
 	BUrl* url, BString* path, BHttpHeaders* responseHeaders, bigtime_t timeout)
 {
-	BMallocIO* json = GetAll(url, responseHeaders, timeout, &jsonType, 0);
+	BString contentType(jsonType);
+	BMallocIO* json = GetAll(url, responseHeaders, timeout, &contentType, 0);
 	if (json == NULL)
 		return NULL;
 

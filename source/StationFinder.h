@@ -46,6 +46,7 @@
 #define MSG_VISIT_SERVICE 'mVSV'
 #define MSG_SELECT_STATION 'mSLS'
 #define MSG_UPDATE_STATION 'mUPS'
+#define MSG_UPDATE_CAPABILITY 'mUPC'
 
 #define RES_BN_SEARCH 10
 
@@ -108,6 +109,7 @@ public:
 	bool HasKeyWords() { return !fKeywords.IsEmpty(); }
 	const BStringList* KeyWords() { return &fKeywords; }
 	const char* Name() { return fName.String(); }
+	void SetKeyWords(const BStringList& keyWords);
 
 private:
 	BString fName;
@@ -128,12 +130,14 @@ public:
 	virtual StationList* FindBy(
 		int capabilityIndex, const char* searchFor, BLooper* resultUpdateTarget)
 		= 0;
+	virtual void LoadCapabilities(BLooper*) {}
 
 	// Provided by ancestor class
 	BString* Name() { return &serviceName; }
 
 	int CountCapabilities() const { return findByCapabilities.CountItems(); }
 	FindByCapability* Capability(int index) const { return findByCapabilities.ItemAt(index); }
+	void SetCapabilityKeyWords(int index, const BStringList& keyWords);
 
 	static void Register(BString* name, InstantiateFunc instantiate);
 

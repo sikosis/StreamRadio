@@ -47,6 +47,8 @@ StreamRadio uses the [Community Radio Browser](http://www.radio-browser.info) as
 
 ### Search by
 This menu allows you to select your search criteria, like name, tag, language, country etc.
+The category lists load in the background so the window opens immediately. You can type a search
+term directly while a list is still loading.
 
 ### Search for
 Here you'll enter a search term fitting the option you chose for *Search by* and click the ![SearchIcon](bnSearch.png) icon or hit <kbd>Enter</kbd> to start your search. The search may take some seconds.
