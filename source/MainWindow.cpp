@@ -49,6 +49,9 @@
 #define B_TRANSLATION_CONTEXT "MainWindow"
 
 
+static const float kMiniPlayerWidth = 560.0f;
+
+
 MainWindow::MainWindow()
 	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio"), B_DOCUMENT_WINDOW, 0),
 	  fContentSplit(NULL),
@@ -692,6 +695,8 @@ MainWindow::_SetViewMode(WindowViewMode mode)
 			fContentSplit->SetItemCollapsed(0, true);
 			fContentSplit->SetItemCollapsed(1, false);
 			ResizeToPreferred();
+			if (Frame().Width() < kMiniPlayerWidth)
+				ResizeTo(kMiniPlayerWidth, Frame().Height());
 			MoveOnScreen(B_MOVE_IF_PARTIALLY_OFFSCREEN);
 			break;
 
