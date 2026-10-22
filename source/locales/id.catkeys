@@ -1,4 +1,4 @@
-1	Indonesian	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Indonesian	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% sekarang memutar %title%
 About	MainWindow		Tentang
 Add station failed	MainWindow		Menambahkan stasiun gagal
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		OKE
 Stations directory created	Station		Direktori stasiun dibuat
 A player for online radio.	RadioApp		Pemutar radio online.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Penggunaan: StreamRadio <filename>\n<filename> harus merupakan file shoutcast.\nJika stasiun sudah ada, itu dibuat untuk diputar jika tidak maka akan ditambahkan.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Penggunaan: StreamRadio2 <filename>\n<filename> harus merupakan file shoutcast.\nJika stasiun sudah ada, itu dibuat untuk diputar jika tidak maka akan ditambahkan.\n
 Add	StationFinder		Tambah
 Add station failed	StationFinder		Gagal menambahkan stasiun
 Find stations	StationFinder		Temukan stasiun
@@ -41,4 +41,4 @@ Name	StationPanel		Nama
 Station URL	StationPanel		Stasiun URL 
 Stream URL	StationPanel		Aliran URL
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [eksperimen]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

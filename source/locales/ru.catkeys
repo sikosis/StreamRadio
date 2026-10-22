@@ -1,6 +1,6 @@
-1	Russian	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Russian	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% сейчас играет %title%
-About	MainWindow		Про StreamRadio
+About	MainWindow		Про StreamRadio2
 Add station failed	MainWindow		Не удалось добавить станцию
 Added station %s to list	MainWindow		Станция %s добавлена в список
 Allow parallel playback	MainWindow		Разрешить параллельное воспроизведение
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		ОК
 Stations directory created	Station		Каталог станций создан
 A player for online radio.	RadioApp		Проигрыватель онлайн-радио.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Использование: StreamRadio <filename>\n<filename> должен быть файлом списка воспроизведения Shoutcast.\nЕсли станция уже существует, она воспроизводится, в противном случае она добавляется.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Использование: StreamRadio2 <filename>\n<filename> должен быть файлом списка воспроизведения Shoutcast.\nЕсли станция уже существует, она воспроизводится, в противном случае она добавляется.\n
 Add	StationFinder		Добавить
 Add station failed	StationFinder		Не удалось добавить станцию
 Find stations	StationFinder		Найти станции
@@ -41,4 +41,4 @@ Name	StationPanel		Имя
 Station URL	StationPanel		URL станции
 Stream URL	StationPanel		URL потока
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimental]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

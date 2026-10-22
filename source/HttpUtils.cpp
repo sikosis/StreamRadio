@@ -323,13 +323,13 @@ HttpUtils::UserAgent()
 		struct version_info version;
 		if (appFileInfo.GetVersionInfo(&version, B_APP_VERSION_KIND) == B_OK)
 			snprintf(sUserAgent, sizeof(sUserAgent),
-				"StreamRadio/%" B_PRIu32 ".%" B_PRIu32 ".%" B_PRIu32, version.major, version.middle,
+				"StreamRadio2/%" B_PRIu32 ".%" B_PRIu32 ".%" B_PRIu32, version.major, version.middle,
 				version.minor);
 	}
 
 	if (sUserAgent[0] == 0) {
 		// There was an error trying to get the version info
-		sprintf(sUserAgent, "StreamRadio");
+		sprintf(sUserAgent, "StreamRadio2");
 	}
 
 	return sUserAgent;

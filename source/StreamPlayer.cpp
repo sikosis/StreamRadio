@@ -123,7 +123,7 @@ StreamPlayer::Play()
 				return playThreadId;
 
 			thread_id watchdogThreadId = spawn_thread(
-				(thread_func)StreamPlayer::_WatchdogThreadFunc, "StreamRadio watchdog",
+				(thread_func)StreamPlayer::_WatchdogThreadFunc, "StreamRadio2 watchdog",
 				B_NORMAL_PRIORITY, this);
 
 			fPlayThread = playThreadId;
@@ -470,7 +470,7 @@ StreamPlayer::_ScheduleReconnect(status_t error)
 	_SetState(StreamPlayer::Buffering);
 
 	thread_id reconnectThread = spawn_thread((thread_func)StreamPlayer::_ReconnectThreadFunc,
-		"StreamRadio reconnect", B_NORMAL_PRIORITY, this);
+		"StreamRadio2 reconnect", B_NORMAL_PRIORITY, this);
 	if (reconnectThread < B_OK) {
 		fInitStatus = reconnectThread;
 		atomic_set(&fReconnectRequested, 0);

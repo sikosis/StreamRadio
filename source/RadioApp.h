@@ -25,7 +25,7 @@
 #include "RadioSettings.h"
 
 
-#define kAppSignature "application/x-vnd.Fishpond-StreamRadio"
+#define kAppSignature "application/x-vnd.StreamRadio2"
 
 
 class RadioApp : BApplication {

@@ -1,4 +1,4 @@
-1	French	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	French	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% passe actuellement %title%
 About	MainWindow		À propos
 Add station failed	MainWindow		Échec à l’ajout de la station
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		D’accord
 Stations directory created	Station		Dossier des stations créé
 A player for online radio.	RadioApp		Un lecteur de flux radio en ligne.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Utilisation : StreamRadio <nom_de_fichier>\n<nom_de_fichier> doit être un fichier de liste de lecture Shoutcast.\nSi la station existe déjà elle est jouée; autrement elle est ajoutée.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Utilisation : StreamRadio2 <nom_de_fichier>\n<nom_de_fichier> doit être un fichier de liste de lecture Shoutcast.\nSi la station existe déjà elle est jouée; autrement elle est ajoutée.\n
 Add	StationFinder		Ajouter
 Add station failed	StationFinder		Échec à l’ajout de la station
 Find stations	StationFinder		Rechercher des stations
@@ -41,4 +41,4 @@ Name	StationPanel		Nom
 Station URL	StationPanel		URL de la station
 Stream URL	StationPanel		URL du flux
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [expérimental]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

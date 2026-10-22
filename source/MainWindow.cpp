@@ -53,7 +53,7 @@ static const float kMiniPlayerWidth = 560.0f;
 
 
 MainWindow::MainWindow()
-	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio"), B_DOCUMENT_WINDOW, 0),
+	: BWindow(BRect(0, 0, 400, 200), B_TRANSLATE_SYSTEM_NAME("StreamRadio2"), B_DOCUMENT_WINDOW, 0),
 	  fContentSplit(NULL),
 	  fStationFinder(NULL),
 	  fViewMode(VIEW_MODE_NORMAL),
@@ -567,7 +567,7 @@ MainWindow::_SetSleepTimer(SleepTimerAction action, int32 minutes)
 			actionText = B_TRANSLATE("mute playback");
 			break;
 		case SLEEP_TIMER_QUIT:
-			actionText = B_TRANSLATE("quit StreamRadio");
+			actionText = B_TRANSLATE("quit StreamRadio2");
 			break;
 		case SLEEP_TIMER_STOP:
 		default:

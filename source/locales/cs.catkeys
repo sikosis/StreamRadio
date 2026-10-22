@@ -1,4 +1,4 @@
-1	Czech	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Czech	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% nyní hraje %title%
 About	MainWindow		O
 Add station failed	MainWindow		Pridání stanice selhalo
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		OK
 Stations directory created	Station		Byl vytvořen adresář stanic
 A player for online radio.	RadioApp		Přehrávač pro online rádio.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Použití: StreamRadio <název_souboru>\n<název_souboru> by měl být soubor seznamu skladeb Shoutcast.\nPokud stanice již existuje, je připravena hrát, jinak je přidána.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Použití: StreamRadio2 <název_souboru>\n<název_souboru> by měl být soubor seznamu skladeb Shoutcast.\nPokud stanice již existuje, je připravena hrát, jinak je přidána.\n
 Add	StationFinder		Přidat
 Add station failed	StationFinder		Přidání stanice se nezdařilo
 Find stations	StationFinder		Najděte stanice
@@ -41,4 +41,4 @@ Name	StationPanel		Název
 Station URL	StationPanel		URL stanice
 Stream URL	StationPanel		URL streamu
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimentální]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

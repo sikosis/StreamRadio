@@ -25,6 +25,7 @@
 #include "RadioSettings.h"
 
 
+// Retain the original filename so upgrading to StreamRadio2 preserves user settings.
 const char* kSettingsFileName = "StreamRadio.settings";
 
 

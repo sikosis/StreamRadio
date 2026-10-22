@@ -1,7 +1,9 @@
 ![icon](icon.png)
-# StreamRadio user guide
+# StreamRadio2 user guide
 
-StreamRadio is an open-source native Haiku internet radio player created by Fishpond and now maintained by Sikosis. It allows users to find, add, manage and listen to online radio stations.
+StreamRadio2 is an open-source native Haiku internet radio player maintained by
+Sikosis and based on the original StreamRadio. It allows users to find, add,
+manage and listen to online radio stations.
 
 ---
 
@@ -22,17 +24,21 @@ StreamRadio is an open-source native Haiku internet radio player created by Fish
 
 ## Installation <a name = "part_install"></a>
 
-StreamRadio is available through HaikuDepot.
+The StreamRadio package currently available through HaikuDepot is the legacy
+HaikuArchives edition, not this independently maintained fork.
 
-StreamRadio can also be built from the source available in the [StreamRadio repository](https://github.com/sikosis/StreamRadio). It depends on libxml2 (installable with *pkgman install devel:libxml2* from Terminal).
+Build this edition from the source available in the [StreamRadio2 repository](https://github.com/sikosis/StreamRadio), then install the generated
+`streamradio2` package. It replaces the legacy package so future
+HaikuPorts updates cannot overwrite this edition. StreamRadio2 depends on
+libxml2 (installable with *pkgman install devel:libxml2* from Terminal).
 
-Bugs and enhancement requests can be filed in the [StreamRadio issue tracker](https://github.com/sikosis/StreamRadio/issues). Help with translations is welcome at [Polyglot](https://i18n.kacperkasper.pl/projects/29).
+Bugs and enhancement requests can be filed in the [StreamRadio2 issue tracker](https://github.com/sikosis/StreamRadio/issues). Help with translations is welcome at [Polyglot](https://i18n.kacperkasper.pl/projects/29).
 
 ## First run <a name = "part_first_run"></a>
 
 ![FirstRun](screenshots/00_First_run_Alert.png)
  
-When StreamRadio is launched for the first time, you'll see an alert, telling you that a folder "Stations" has been created in your "settings" folder. You can link that folder to your Desktop or the Deskbar menu (*ln -s ~/config/settings/Stations ~/config/settings/deskbar/menu/*) to conveniently play stations directly.
+When StreamRadio2 is launched for the first time, you'll see an alert, telling you that a folder "Stations" has been created in your "settings" folder. You can link that folder to your Desktop or the Deskbar menu (*ln -s ~/config/settings/Stations ~/config/settings/deskbar/menu/*) to conveniently play stations directly.
 
 ![FirstRun](screenshots/01_First_run_GUI.png)
 
@@ -43,7 +49,7 @@ After acknowledging that alert, an empty window opens, as you haven't added any 
 ![AddNewStation](screenshots/02_Add_New_Stations_1.png)
 
 ### Service
-StreamRadio uses the [Community Radio Browser](http://www.radio-browser.info) as a service that provides a list of online radio stations. Click on the ![Web](bnWeb.png) icon next to it to open the homepage of that service.
+StreamRadio2 uses the [Community Radio Browser](http://www.radio-browser.info) as a service that provides a list of online radio stations. Click on the ![Web](bnWeb.png) icon next to it to open the homepage of that service.
 
 ### Search by
 This menu allows you to select your search criteria, like name, tag, language, country etc.
@@ -83,7 +89,7 @@ previous normal window size and layout.
 
 Choose *App | Sleep timer…* to schedule an action without interrupting the
 current station. The timer can stop all playback, mute all playing stations, or
-quit StreamRadio. It can run at the top of the next hour or after 5, 10, 15, 30,
+quit StreamRadio2. It can run at the top of the next hour or after 5, 10, 15, 30,
 or 45 minutes.
 
 Setting another sleep timer replaces the current one. Choose

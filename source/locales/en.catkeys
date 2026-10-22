@@ -1,4 +1,4 @@
-1	English	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	English	application/x-vnd.StreamRadio2	1780791103
 A directory for saving stations has been created in your settings folder. Link this directory to your deskbar menu to play stations directly.	Station		A directory for saving stations has been created in your settings folder. Link this directory to your deskbar menu to play stations directly.
 Station %s did not respond correctly and could not be added	MainWindow		Station %s did not respond correctly and could not be added
 OK	StationFinder		OK
@@ -26,13 +26,13 @@ listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimenta
 Add	StationFinder		Add
 Search	MainWindow		Search
 OK	Station		OK
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2
 Station URL	StationPanel		Station URL
 Search by	StationFinder		Search by
 Probing station %station% failed	MainWindow		Probing station %station% failed
 Help…	MainWindow		Help…
 Genre	StationPanel		Genre
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n
 Stream URL	StationPanel		Stream URL
 App	MainWindow		App
 Community Radio Browser	StationFinderRadioNetwork		Community Radio Browser

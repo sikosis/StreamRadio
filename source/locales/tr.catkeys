@@ -1,10 +1,10 @@
-1	Turkish	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Turkish	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% — %title%
 About	MainWindow		Hakkında
 Add station failed	MainWindow		İstasyon eklenemedi
 Added station %s to list	MainWindow		%s istasyonu listeye eklendi
 Allow parallel playback	MainWindow		Paralel çalmaya izin ver
-App	MainWindow		StreamRadio
+App	MainWindow		StreamRadio2
 Check station	MainWindow		İstasyon denetle
 Failed playing station %s: %s	MainWindow		%s istasyonu çalınamadı: %s
 File %s could not be loaded as a station	MainWindow		%s dosyası bir istasyon olarak yüklenemedi
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		Tamam
 Stations directory created	Station		İstasyonlar dizini oluşturuldu
 A player for online radio.	RadioApp		Çevrimiçi radyo oynatıcısı
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Kullanım: StreamRadio <dosyaadı>\n<dosyaadı> bir Shoutcast çalma listesi dosyası olmalıdır.\nEğer istasyon halihazırda varsa çalınır, yoksa eklenir.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Kullanım: StreamRadio2 <dosyaadı>\n<dosyaadı> bir Shoutcast çalma listesi dosyası olmalıdır.\nEğer istasyon halihazırda varsa çalınır, yoksa eklenir.\n
 Add	StationFinder		Ekle
 Add station failed	StationFinder		İstasyon eklenemedi
 Find stations	StationFinder		İstasyon Bul
@@ -41,4 +41,4 @@ Name	StationPanel		Ad
 Station URL	StationPanel		İstasyon URL’si
 Stream URL	StationPanel		Akış URL’si
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [deneysel]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

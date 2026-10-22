@@ -1,4 +1,4 @@
-1	Friulian	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Friulian	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% e trasmet %title%
 About	MainWindow		Informazions
 Add station failed	MainWindow		No si è rivâts a zontâ la stazion
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		Va ben
 Stations directory created	Station		Cartele des stazions creade
 A player for online radio.	RadioApp		Un riprodutôr par radios online.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Ûs: StreamRadio <non_file>\n<non_file> al à di sei une liste di riproduzion Shoutcast.\nSe la stazion e esist za, e ven fate partî in câs contrari e ven zontade.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Ûs: StreamRadio2 <non_file>\n<non_file> al à di sei une liste di riproduzion Shoutcast.\nSe la stazion e esist za, e ven fate partî in câs contrari e ven zontade.\n
 Add	StationFinder		Zonte
 Add station failed	StationFinder		Zontâ de stazion falît
 Find stations	StationFinder		Cjate stazions
@@ -41,4 +41,4 @@ Name	StationPanel		Non
 Station URL	StationPanel		URL de stazion
 Stream URL	StationPanel		URL dal flus
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [sperimentâl]
-StreamRadio	System name		FlusRadio
+StreamRadio2	System name		StreamRadio2

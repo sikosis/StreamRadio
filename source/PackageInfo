@@ -1,8 +1,8 @@
-name			streamradio
+name			streamradio2
 version			@VERSION@-1
 architecture	@ARCH@
 summary			"Find and listen to internet radio stations"
-description		"StreamRadio helps you find and listen to internet radio streams."
+description		"StreamRadio2 is the independently maintained Sikosis internet radio player for Haiku."
 packager		"Sikosis"
 vendor			"Sikosis"
 licenses {
@@ -13,8 +13,16 @@ copyrights {
 	"2018-2026 HaikuArchives Team"
 }
 provides {
-	streamradio = @VERSION@
-	app:streamradio = @VERSION@
+	streamradio2 = @VERSION@
+	app:StreamRadio2 = @VERSION@
+}
+conflicts {
+	streamradio
+	streamradio_sikosis
+}
+replaces {
+	streamradio
+	streamradio_sikosis
 }
 requires {
 	haiku >= r1~beta6_hrev59866_79-1

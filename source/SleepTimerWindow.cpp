@@ -56,7 +56,7 @@ SleepTimerWindow::SleepTimerWindow(BWindow* parent)
 	AddOption(fActionMenu, B_TRANSLATE("Stop playback"), "action", SLEEP_TIMER_STOP)
 		->SetMarked(true);
 	AddOption(fActionMenu, B_TRANSLATE("Mute playback"), "action", SLEEP_TIMER_MUTE);
-	AddOption(fActionMenu, B_TRANSLATE("Quit StreamRadio"), "action", SLEEP_TIMER_QUIT);
+	AddOption(fActionMenu, B_TRANSLATE("Quit StreamRadio2"), "action", SLEEP_TIMER_QUIT);
 
 	AddOption(fDelayMenu, B_TRANSLATE("At top of hour"), "minutes", 0);
 	AddOption(fDelayMenu, B_TRANSLATE("In 5 minutes"), "minutes", 5);

@@ -1,4 +1,4 @@
-1	Catalan	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Catalan	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% ara reprodueix %title%
 About	MainWindow		Quant a
 Add station failed	MainWindow		Ha fallat afegir una emissora.
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		D'acord
 Stations directory created	Station		S'ha creat el directori d'emissores.
 A player for online radio.	RadioApp		Un reproductor de ràdio en línia
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Ús: StreamRadio <nom_de_fitxer>\n El <nom_de_fitxer> hauria de ser un fitxer de llista de reproducció de Shoutcast.\nSi l’emissora ja existeix, es reprodueix; si no, s’afegeix.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Ús: StreamRadio2 <nom_de_fitxer>\n El <nom_de_fitxer> hauria de ser un fitxer de llista de reproducció de Shoutcast.\nSi l’emissora ja existeix, es reprodueix; si no, s’afegeix.\n
 Add	StationFinder		Afegeix
 Add station failed	StationFinder		Ha fallat afegir l'emissora.
 Find stations	StationFinder		Troba emissores
@@ -41,4 +41,4 @@ Name	StationPanel		Nom
 Station URL	StationPanel		URL de l'emissora
 Stream URL	StationPanel		URL del flux
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimental]
-StreamRadio	System name		StreamRàdio
+StreamRadio2	System name		StreamRadio2

@@ -1,4 +1,4 @@
-1	Dutch	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Dutch	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% speelt nu %title%
 About	MainWindow		Over
 Add station failed	MainWindow		Station toevoegen mislukt
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		OK
 Stations directory created	Station		Stations map aangemaakt
 A player for online radio.	RadioApp		Een speler voor online Radio.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Gebruik: StreamRadio <filename>\n<filename> moet een Shoutcast playlist bestand zijn.\nIf het station bestaat reeds, het is gemaakt om af te spelen anders wordt het toegevoegd.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		Gebruik: StreamRadio2 <filename>\n<filename> moet een Shoutcast playlist bestand zijn.\nIf het station bestaat reeds, het is gemaakt om af te spelen anders wordt het toegevoegd.\n
 Add	StationFinder		Toevoegen
 Add station failed	StationFinder		Station toevoegen mislukt
 Find stations	StationFinder		Zoek stations
@@ -41,4 +41,4 @@ Name	StationPanel		Naam
 Station URL	StationPanel		Station URL
 Stream URL	StationPanel		Stream URL
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimental]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

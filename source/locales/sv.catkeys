@@ -1,4 +1,4 @@
-1	Swedish	application/x-vnd.Fishpond-StreamRadio	1780791103
+1	Swedish	application/x-vnd.StreamRadio2	1780791103
 %station% now plays %title%	MainWindow		%station% spelar nu %title%
 About	MainWindow		Om
 Add station failed	MainWindow		Det gick inte att lägga till station
@@ -26,7 +26,7 @@ A directory for saving stations has been created in your settings folder. Link t
 OK	Station		OK
 Stations directory created	Station		Stationskatalog skapad
 A player for online radio.	RadioApp		En spelare för onlineradio.
-Usage: StreamRadio <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		\nAnvändning: StreamRadio <filnamn>\n<filnamn> bör vara en Shoutcast-spellistfil. \n Om stationen redan finns görs den för att spela annars läggs den till.\n
+Usage: StreamRadio2 <filename>\n<filename> should be a Shoutcast playlist file.\nIf the station already exists, it is made to play otherwise it is added.\n	RadioApp		\nAnvändning: StreamRadio2 <filnamn>\n<filnamn> bör vara en Shoutcast-spellistfil. \n Om stationen redan finns görs den för att spela annars läggs den till.\n
 Add	StationFinder		Lägg till
 Add station failed	StationFinder		Det gick inte att lägga till station
 Find stations	StationFinder		Hitta stationer
@@ -41,4 +41,4 @@ Name	StationPanel		Namn
 Station URL	StationPanel		Stations URL
 Stream URL	StationPanel		Stream URL
 listenlive.eu [experimental]	StationFinderListenLive		listenlive.eu [experimentell]
-StreamRadio	System name		StreamRadio
+StreamRadio2	System name		StreamRadio2

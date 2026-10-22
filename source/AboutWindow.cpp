@@ -112,7 +112,7 @@ LoadAppIcon()
 static BString
 AppVersion()
 {
-	BString version(B_TRANSLATE("Version 1.3.2"));
+	BString version(B_TRANSLATE("Version 2.0"));
 	app_info appInfo;
 	if (be_app->GetAppInfo(&appInfo) != B_OK)
 		return version;
@@ -121,9 +121,14 @@ AppVersion()
 	BAppFileInfo appFileInfo(&appFile);
 	version_info versionInfo;
 	if (appFileInfo.GetVersionInfo(&versionInfo, B_APP_VERSION_KIND) == B_OK) {
-		version.SetToFormat(B_TRANSLATE("Version %lu.%lu.%lu"),
-			(unsigned long)versionInfo.major, (unsigned long)versionInfo.middle,
-			(unsigned long)versionInfo.minor);
+		if (versionInfo.minor == 0) {
+			version.SetToFormat(B_TRANSLATE("Version %lu.%lu"),
+				(unsigned long)versionInfo.major, (unsigned long)versionInfo.middle);
+		} else {
+			version.SetToFormat(B_TRANSLATE("Version %lu.%lu.%lu"),
+				(unsigned long)versionInfo.major, (unsigned long)versionInfo.middle,
+				(unsigned long)versionInfo.minor);
+		}
 	}
 
 	return version;
@@ -149,7 +154,7 @@ CreateCreditsView()
 		.SetInsets(12.0f)
 		.Add(Heading("project heading", B_TRANSLATE("Project")))
 		.Add(new BStringView("copyright",
-			"Copyright 2008–2026 The StreamRadio contributors"))
+			"Copyright 2008–2026 The StreamRadio2 contributors"))
 		.AddStrut(8.0f)
 		.Add(Heading("current heading", B_TRANSLATE("Current Contributor")))
 		.Add(new BStringView("current contributor", "Sikosis"))
@@ -179,7 +184,7 @@ CreateLicencesView()
 
 	BLayoutBuilder::Group<>(view, B_VERTICAL, 4.0f)
 		.SetInsets(12.0f)
-		.Add(Heading("streamradio licence heading", "StreamRadio"))
+		.Add(Heading("streamradio licence heading", "StreamRadio2"))
 		.Add(new BStringView("streamradio licence",
 			"GNU General Public License, version 3 or later"))
 		.Add(new LinkView("gpl link", "GNU GPL version 3",
@@ -276,10 +281,10 @@ LinkView::MouseDown(BPoint point)
 
 
 AboutWindow::AboutWindow()
-	: BWindow(BRect(0, 0, 640, 620), B_TRANSLATE("About StreamRadio"), B_TITLED_WINDOW,
+	: BWindow(BRect(0, 0, 640, 620), B_TRANSLATE("About StreamRadio2"), B_TITLED_WINDOW,
 		B_NOT_ZOOMABLE | B_CLOSE_ON_ESCAPE)
 {
-	BStringView* title = new BStringView("title", B_TRANSLATE_SYSTEM_NAME("StreamRadio"));
+	BStringView* title = new BStringView("title", B_TRANSLATE_SYSTEM_NAME("StreamRadio2"));
 	BFont titleFont(*be_bold_font);
 	titleFont.SetSize(be_plain_font->Size() * 2.0f);
 	title->SetFont(&titleFont);

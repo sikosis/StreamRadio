@@ -8,7 +8,7 @@
 ## file:///system/develop/documentation/makefile-engine.html
 
 # The name of the binary.
-NAME = StreamRadio
+NAME = StreamRadio2
 
 # The type of binary, must be one of:
 #	APP:	Application
@@ -22,7 +22,7 @@ SECONDARY_ARCHITECTURES="x86"
 ARCH=$(shell uname -m)
 
 # If you plan to use localization, specify the application's MIME signature.
-APP_MIME_SIG = application/x-vnd.Fishpond-StreamRadio
+APP_MIME_SIG = application/x-vnd.StreamRadio2
 
 #	The following lines tell Pe and Eddie where the SRCS, RDEFS, and RSRCS are
 #	so that Pe and Eddie can fill them in for you.
@@ -138,12 +138,13 @@ LINKER_FLAGS =
 #	Specify the version of this binary. Example:
 #		-app 3 4 0 d 0 -short 340 -long "340 "`echo -n -e '\302\251'`"1999 GNU GPL"
 #	This may also be specified in a resource.
-APP_VERSION = 1.3.2
+APP_VERSION = 2.0
 
 
 TARGET_DIR := ../dist
 PACKAGE_DIR = $(TARGET_DIR)/package
-PACKAGE_NAME = $(TARGET_DIR)/$(NAME)-$(APP_VERSION)-$(ARCH).hpkg
+PACKAGE_ID = streamradio2
+PACKAGE_NAME = $(TARGET_DIR)/$(PACKAGE_ID)-$(APP_VERSION)-$(ARCH).hpkg
 
 package:: default
 	

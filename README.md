@@ -1,20 +1,20 @@
 <p align="center">
-  <img src="graphics/Radio.png" alt="StreamRadio" width="256">
+  <img src="graphics/Radio.png" alt="StreamRadio2" width="256">
 </p>
 
-# StreamRadio [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-1.3.2-orange)
+# StreamRadio2 [![platform](https://img.shields.io/badge/platform-Haiku-blue)](https://www.haiku-os.org/) ![build](https://img.shields.io/badge/build-active-brightgreen) [![license](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html) ![version](https://img.shields.io/badge/version-2.0-orange)
 
-StreamRadio is a native Haiku application for finding and listening to internet
+StreamRadio2 is a native Haiku application for finding and listening to internet
 radio stations.
 
 Search the [Community Radio Browser](https://www.radio-browser.info/) directory,
 add stations to your collection, inspect and edit station details, and control
-the volume of each stream. StreamRadio also supports direct Shoutcast URLs and
+the volume of each stream. StreamRadio2 also supports direct Shoutcast URLs and
 optional parallel playback of multiple stations. A sleep timer can stop or mute
-playback, or quit StreamRadio, at the top of the hour or after a preset delay.
+playback, or quit StreamRadio2, at the top of the hour or after a preset delay.
 The main window also offers mini-player, maximum-height, and fullscreen modes.
 
-![StreamRadio station list and station information](docs/screenshots/StreamRadio.png)
+![StreamRadio2 station list and station information](docs/screenshots/StreamRadio.png)
 
 ---
 
@@ -52,7 +52,7 @@ make
 make bindcatalogs
 ```
 
-The application is written to `dist/StreamRadio`.
+The application is written to `dist/StreamRadio2`.
 
 For a 32-bit build, run the build commands through `setarch`:
 
@@ -67,7 +67,7 @@ setarch x86 make bindcatalogs
 
 ## Package
 
-On Haiku, build an installable package after compiling StreamRadio:
+On Haiku, build an installable package after compiling StreamRadio2:
 
 ```sh
 cd source
@@ -77,14 +77,19 @@ make package
 The package is written to:
 
 ```text
-dist/StreamRadio-1.3.2-<architecture>.hpkg
+dist/streamradio2-2.0-<architecture>.hpkg
 ```
 
 Install it with `pkgman`, substituting the generated filename:
 
 ```sh
-pkgman install ./dist/StreamRadio-1.3.2-x86_64.hpkg
+pkgman install ./dist/streamradio2-2.0-x86_64.hpkg
 ```
+
+StreamRadio2 has its own package and application identities and replaces the
+legacy HaikuPorts `streamradio` package. This prevents a HaikuPorts update from
+restoring the old application over this edition. Existing StreamRadio settings
+and stations are preserved when upgrading.
 
 > [!WARNING]
 > The package target recreates its staging directory. Keep any files you need
@@ -95,16 +100,16 @@ pkgman install ./dist/StreamRadio-1.3.2-x86_64.hpkg
 ## Documentation
 
 For installation and usage instructions, see the
-[StreamRadio user guide](docs/userguide.md).
+[StreamRadio2 user guide](docs/userguide.md).
 
 Bug reports and feature requests are welcome in the
-[StreamRadio issue tracker](https://github.com/sikosis/StreamRadio/issues).
+[StreamRadio2 issue tracker](https://github.com/sikosis/StreamRadio/issues).
 
 ---
 
 ## License
 
-StreamRadio is free software licensed under the
+StreamRadio2 is free software licensed under the
 [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html).
 Third-party components and their licenses are listed in the application's
 About window.
